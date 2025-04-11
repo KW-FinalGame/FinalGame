@@ -54,8 +54,8 @@ const CustomButton = styled(Button)`
   background-color: gray !important;
   margin-top:-20px;
   border: none !important;
-  padding: 20px 60px;
-  font-size: 35px;
+  padding: 15px 50px;
+  font-size: 30px;
   font-weight: bold;
   color: white !important;
   border-radius: 15px;
