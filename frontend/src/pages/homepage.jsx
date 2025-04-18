@@ -1,5 +1,6 @@
 // frontend/src/pages/Home.jsx
 import React,{ useState } from 'react';
+import { useNavigate } from 'react-router-dom'; 
 import styled from 'styled-components';
 import { Button } from 'react-bootstrap';
 import subway from "../assets/imgs/subway.png"; 
@@ -156,6 +157,7 @@ const CheckboxInput = styled.input`
 
 
 function Home() {
+   const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
     const [showSignup, setShowSignup] = useState(false);
 
@@ -181,6 +183,9 @@ function Home() {
     };
     const closeSignup = () => setShowSignup(false);
 
+    const handleLogin = () => {
+      navigate('/main');
+    }
   return (
     <div>
       <Header>
@@ -202,7 +207,7 @@ function Home() {
           <ModalTitle>로그인</ModalTitle>
           <Input type="text" placeholder="ID" required />
           <Input type="password" placeholder="PW" required />
-          <ConfirmButton onClick={closeLogin}>확인</ConfirmButton>
+          <ConfirmButton onClick={handleLogin}>확인</ConfirmButton>
           <SignupLink onClick={openSignup}>회원가입하기</SignupLink>
         </ModalContent>
       </ModalOverlay>
