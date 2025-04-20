@@ -46,7 +46,7 @@ const TopWrapper = styled.div`
   align-items: center;
   justify-content: center;
   gap: 20px;
-  padding-bottom: 10px;
+  padding-bottom: 0px;
 `;
 
 const SubwayLogo = styled.img`
@@ -87,10 +87,10 @@ const GrayBox = styled.div`
   background-color: #f0f0f0;
   width: 80%;
   max-width: 450px;
-  height: 95%;
+  height: 85%;
   border-radius: 15px;
   border: 2.5px solid #ccc;
-  margin-top:-30px;
+  margin-top:-60px;
   display: flex;
   flex-direction: column;
   padding: 20px;
@@ -197,13 +197,29 @@ const ModalTitle = styled.h2`
   margin-bottom: 20px;
 `;
 
-const CloseButton = styled.button`
-  background-color: #EE3232;
+const OpenButton = styled.button`
+  background-color: #73CD37;
+  font-size: 23px;
   color: white;
   border: 100px;
-  padding: 10px 15px;
+  padding: 10px 19px;
   border-radius: 50%;
   cursor: pointer;
+  margin-right: 15px;
+
+  &:hover {
+    background-color: #73CD37;
+  }
+`;
+const CloseButton = styled.button`
+  background-color: #EE3232;
+  font-size: 23px;
+  color: white;
+  border: 100px;
+  padding: 10px 19px;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-left: 15px;
 
   &:hover {
     background-color: #EE3232;
@@ -236,6 +252,9 @@ function Main() {
   const closeModal = () => {
     setSelectedStation(null); // 모달 닫기
   };
+  const OpenCam = () => {
+    navigate('/cam', { state: { stationName: selectedStation } });
+  };
 
   return (
     <PageWrapper>
@@ -267,6 +286,7 @@ function Main() {
         <ModalBackdrop>
           <Modal>
             <ModalTitle>{selectedStation} 역의 역무원...✆</ModalTitle>
+            <OpenButton onClick={OpenCam}>✆</OpenButton>
             <CloseButton onClick={closeModal}>✆</CloseButton>
           </Modal>
         </ModalBackdrop>
