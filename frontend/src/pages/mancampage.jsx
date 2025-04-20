@@ -1,9 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
 import Webcam from 'react-webcam'; 
-
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
@@ -70,13 +68,11 @@ const RoundButton = styled.button`
   }
 `;
 
-function Cam() {
+function Mancam() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const stationName = location.state?.stationName || "알 수 없음";
 
-  const goBackToMain = () => {
-    navigate('/main');
+  const goBackToManage = () => {
+    navigate('/manage');
   };
 
   return (
@@ -85,9 +81,7 @@ function Cam() {
         <LogoText>LOGOTEXT</LogoText>
       </Header>
         
-      <TextBox>
-           <strong>{stationName}</strong> 의 역무원
-        </TextBox>
+      
         <WebcamBox>
           <Webcam
             audio={false}
@@ -101,10 +95,11 @@ function Cam() {
           여기에 사용자의 수화를 인식한 텍스트가 나와요.
         </TextBox>
 
-        <RoundButton onClick={goBackToMain}>✆</RoundButton>
+
+        <RoundButton onClick={goBackToManage}>✆</RoundButton>
       </PageWrapper>
     
   );
 }
 
-export default Cam;
+export default Mancam;
