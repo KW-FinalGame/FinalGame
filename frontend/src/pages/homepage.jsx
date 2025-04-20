@@ -5,6 +5,11 @@ import styled from 'styled-components';
 import { Button } from 'react-bootstrap';
 import subway from "../assets/imgs/subway.png"; 
 
+const PageWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+`;
 const Header = styled.header`
   border-bottom: 3px solid #D9D9D9;
   padding: 25px;
@@ -187,7 +192,7 @@ function Home() {
       navigate('/main');
     }
   return (
-    <div>
+    <PageWrapper>
       <Header>
         <LogoText>LOGOTEXT</LogoText>
       </Header>
@@ -240,7 +245,7 @@ function Home() {
           </ConfirmButton>
         </ModalContent>
       </ModalOverlay>
-    </div>
+    </PageWrapper>
   );
 }
 
