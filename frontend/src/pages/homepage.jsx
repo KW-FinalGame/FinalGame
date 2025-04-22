@@ -160,6 +160,51 @@ const CheckboxInput = styled.input`
   margin-right: 10px;
 `;
 
+//로그인 함수
+const handleLogin = async (data) => {
+  try {
+    const response = await axios.post('/login', {
+      id: data.id,
+      password: data.password,
+      role: data.role,
+    });
+    console.log('로그인 성공:', response.data.user.id);
+    console.log(response);
+    
+
+    sessionStorage.setItem('accessToken', response.data.token);
+    sessionStorage.setItem('userId', response.data.user.id);
+    dispatch(login([response.data.user.id,response.data.user.username]));
+    closeModal();
+    if(response.data.user.role == 'admin') navigate('/managepage');
+  } catch (error) {
+    console.log('로그인 실패:', error);
+    alert('로그인 중 오류가 발생했습니다.');
+  }
+};
+
+//회원가입 함수
+const handleSignup = async (data) => {
+  try {
+    const response = await axios.post('/register', {
+      username: data.username,
+      id: data.id,
+      password: data.password,
+      birthday: data.birthdate,
+      phone_num: data.phone_num,
+      is_disabled: data.is_disabled,
+      special_notes: data.special_notes
+    })
+    console.log('회원가입 성공', response);
+    dispatch(toggleMode());
+
+  } catch (error) {
+    console.log('회원가입 실패:', error);
+    alert('회원가입에 실패했습니다.')
+  }
+};
+
+
 
 function Home() {
    const navigate = useNavigate();
@@ -206,6 +251,10 @@ function Home() {
       </ButtonWrapper>
 
       
+      const [loginId, setLoginId] = useState('');
+      const [loginPw, setLoginPw] = useState('');
+      const [loginRole, setLoginRole] = useState('user');
+
       {/* 로그인 모달 */}
       <ModalOverlay show={showModal} onClick={closeLogin}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
