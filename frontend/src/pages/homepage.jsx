@@ -195,7 +195,7 @@ function Home() {
       sessionStorage.setItem('userId', response.data.user.id);
 
       setShowModal(false);
-      navigate(response.data.user.role === 'admin' ? '/managepage' : '/homepage');
+      navigate(response.data.user.role === 'admin' ? '/manage' : '/main');
     } catch (error) {
       console.error('로그인 실패:', error);
       alert('로그인에 실패했습니다.');
