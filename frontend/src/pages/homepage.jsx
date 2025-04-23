@@ -174,13 +174,14 @@ function Home() {
   // 회원가입
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [birthday, setBirthday] = useState('');
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [isCertified, setIsCertified] = useState(false);
   const [etc, setEtc] = useState('');
 
-  const isFormValid = name && phone && userId && password && confirmPw && isCertified && password === confirmPw;
+  const isFormValid = name && phone && birthday && userId && password && confirmPw && isCertified && password === confirmPw;
 
   const handleLogin = async () => {
     try {
@@ -207,7 +208,7 @@ function Home() {
         username: name,
         id: userId,
         password,
-        birthday: '', // 생일 항목이 있다면 state에 추가 필요
+        birthday, // 생일 항목이 있다면 state에 추가 필요
         phone_num: phone,
         is_disabled: isCertified,
         special_notes: etc,
@@ -247,6 +248,12 @@ function Home() {
             <>
               <Input type="text" placeholder="이름 (필수)" value={name} onChange={(e) => setName(e.target.value)} />
               <Input type="tel" placeholder="전화번호 (필수)" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Input
+                  type="date"
+                  placeholder="생년월일 (필수)"
+                  value={birthday}
+                  onChange={(e) => setBirthday(e.target.value)}
+                />
               <Input type="text" placeholder="아이디 (필수)" value={userId} onChange={(e) => setUserId(e.target.value)} />
               <Input type="password" placeholder="비밀번호 (필수)" value={password} onChange={(e) => setPassword(e.target.value)} />
               <Input type="password" placeholder="비밀번호 확인 (필수)" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
