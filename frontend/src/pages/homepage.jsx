@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Button } from 'react-bootstrap';
 import subway from "../assets/imgs/subway.png"; 
+import axios from 'axios'; // axios import 추가
 
 const PageWrapper = styled.div`
   display: flex;
@@ -160,6 +161,28 @@ const CheckboxInput = styled.input`
   margin-right: 10px;
 `;
 
+
+function Home() {
+   const navigate = useNavigate();
+    const [showModal, setShowModal] = useState(false);
+    const [showSignup, setShowSignup] = useState(false);
+
+    const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [userId, setUserId] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPw, setConfirmPw] = useState('');
+    const [isCertified, setIsCertified] = useState(false);
+    const [etc, setEtc] = useState('');
+
+  // 로그인 입력 상태
+  const [loginId, setLoginId] = useState('');
+  const [loginPw, setLoginPw] = useState('');
+  const [loginRole, setLoginRole] = useState('user');
+
+    const isFormValid = name && phone && userId && password && confirmPw && isCertified;
+
+  
 //로그인 함수
 const handleLogin = async (data) => {
   try {
@@ -204,24 +227,6 @@ const handleSignup = async (data) => {
   }
 };
 
-
-
-function Home() {
-   const navigate = useNavigate();
-    const [showModal, setShowModal] = useState(false);
-    const [showSignup, setShowSignup] = useState(false);
-
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [userId, setUserId] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPw, setConfirmPw] = useState('');
-    const [isCertified, setIsCertified] = useState(false);
-    const [etc, setEtc] = useState('');
-
-    const isFormValid = name && phone && userId && password && confirmPw && isCertified;
-
-  
     const openLogin = () => {
       setShowModal(true);
       setShowSignup(false);
@@ -232,10 +237,6 @@ function Home() {
       setShowSignup(true);
     };
     const closeSignup = () => setShowSignup(false);
-
-    const handleLogin = () => {
-      navigate('/main');
-    }
   return (
     <PageWrapper>
       <Header>
@@ -256,40 +257,35 @@ function Home() {
       const [loginRole, setLoginRole] = useState('user');
 
       {/* 로그인 모달 */}
-      <ModalOverlay show={showModal} onClick={closeLogin}>
+      <ModalOverlay show={showModal} onClick={() => setShowModal(false)}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <ModalTitle>로그인</ModalTitle>
-          <Input type="text" placeholder="ID" required />
-          <Input type="password" placeholder="PW" required />
+          <Input type="text" placeholder="ID" value={loginId} onChange={(e) => setLoginId(e.target.value)} />
+          <Input type="password" placeholder="PW" value={loginPw} onChange={(e) => setLoginPw(e.target.value)} />
           <ConfirmButton onClick={handleLogin}>확인</ConfirmButton>
-          <SignupLink onClick={openSignup}>회원가입하기</SignupLink>
+          <SignupLink onClick={() => { setShowModal(false); setShowSignup(true); }}>회원가입하기</SignupLink>
         </ModalContent>
       </ModalOverlay>
 
       {/* 회원가입 모달 */}
-      <ModalOverlay show={showSignup} onClick={closeSignup}>
+      <ModalOverlay show={showSignup} onClick={() => setShowSignup(false)}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <ModalTitle>회원가입</ModalTitle>
-          <Input type="text" placeholder="이름 (필수)" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Input type="tel" placeholder="전화번호 (필수)" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-          <Input type="text" placeholder="아이디 (필수)" value={userId} onChange={(e) => setUserId(e.target.value)} required />
-          <Input type="password" placeholder="비밀번호 (필수)" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <Input type="password" placeholder="비밀번호 확인 (필수)" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} required />
+          <Input type="text" placeholder="이름 (필수)" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input type="tel" placeholder="전화번호 (필수)" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <Input type="text" placeholder="아이디 (필수)" value={userId} onChange={(e) => setUserId(e.target.value)} />
+          <Input type="password" placeholder="비밀번호 (필수)" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input type="password" placeholder="비밀번호 확인 (필수)" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
           <CheckboxWrapper>
             <CheckboxInput
               type="checkbox"
               checked={isCertified}
               onChange={(e) => setIsCertified(e.target.checked)}
-              required
             />
             청각장애인 인증 (필수)
           </CheckboxWrapper>
           <Input type="text" placeholder="기타 (기저질환 등, 선택)" value={etc} onChange={(e) => setEtc(e.target.value)} />
-          <ConfirmButton disabled={!isFormValid} onClick={() => {
-            // 가입 완료 후 로그인 모달로 전환
-            setShowSignup(false);
-            setShowModal(true);
-            }}>
+          <ConfirmButton disabled={!isFormValid || password !== confirmPw} onClick={handleSignup}>
             가입하기
           </ConfirmButton>
         </ModalContent>
