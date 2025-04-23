@@ -1,0 +1,13 @@
+{
+    "name": "FinalGame",
+    "version": "1.0.0",
+    "scripts": {
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "cd frontend && npm start",
+    "server": "cd backend && node server.js"
+    },
+    "devDependencies": {
+      "concurrently": "^7.0.0"
+    }
+  }
+  
