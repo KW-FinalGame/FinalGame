@@ -33,7 +33,7 @@ const GrayBox = styled.div`
   margin-top: 60px;
   margin-bottom: 30px;
   padding: 20px;
-  width: 60%;
+  width: 35%;
   height: 700px; /* 필요에 따라 조정 */
   border-radius: 12px;
 
