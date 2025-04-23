@@ -1,16 +1,18 @@
 // frontend/src/pages/Home.jsx
-import React,{ useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import styled from 'styled-components';
 import { Button } from 'react-bootstrap';
+import axios from 'axios';
 import subway from "../assets/imgs/subway.png"; 
-import axios from 'axios'; // axios import 추가
 
+// ===== Styled Components =====
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   height: 100vh;
 `;
+
 const Header = styled.header`
   border-bottom: 3px solid #D9D9D9;
   padding: 25px;
@@ -26,7 +28,6 @@ const LogoText = styled.h1`
   @media (max-width: 768px) {
     font-size: 30px;
   }
-
   @media (max-width: 480px) {
     font-size: 24px;
   }
@@ -45,7 +46,6 @@ const StyledImage = styled.img`
   @media (max-width: 768px) {
     width: 80%;
   }
-
   @media (max-width: 480px) {
     width: 90%;
   }
@@ -59,7 +59,7 @@ const ButtonWrapper = styled.div`
 
 const CustomButton = styled(Button)`
   background-color: gray !important;
-  margin-top:-20px;
+  margin-top: -20px;
   border: none !important;
   padding: 15px 50px;
   font-size: 30px;
@@ -74,14 +74,12 @@ const CustomButton = styled(Button)`
     padding: 15px 40px;
     font-size: 25px;
   }
-
   @media (max-width: 480px) {
     padding: 12px 30px;
     font-size: 20px;
   }
 `;
 
-//Modal Style
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -161,133 +159,106 @@ const CheckboxInput = styled.input`
   margin-right: 10px;
 `;
 
-
+// ===== Component =====
 function Home() {
-   const navigate = useNavigate();
-    const [showModal, setShowModal] = useState(false);
-    const [showSignup, setShowSignup] = useState(false);
+  const navigate = useNavigate();
+  
+  const [showModal, setShowModal] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true);
 
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [userId, setUserId] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPw, setConfirmPw] = useState('');
-    const [isCertified, setIsCertified] = useState(false);
-    const [etc, setEtc] = useState('');
-
-  // 로그인 입력 상태
+  // 로그인
   const [loginId, setLoginId] = useState('');
   const [loginPw, setLoginPw] = useState('');
-  const [loginRole, setLoginRole] = useState('user');
+  const [loginRole] = useState('user');
 
-    const isFormValid = name && phone && userId && password && confirmPw && isCertified;
+  // 회원가입
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [isCertified, setIsCertified] = useState(false);
+  const [etc, setEtc] = useState('');
 
-  
-//로그인 함수
-const handleLogin = async (data) => {
-  try {
-    const response = await axios.post('/login', {
-      id: data.id,
-      password: data.password,
-      role: data.role,
-    });
-    console.log('로그인 성공:', response.data.user.id);
-    console.log(response);
-    
+  const isFormValid = name && phone && userId && password && confirmPw && isCertified && password === confirmPw;
 
-    sessionStorage.setItem('accessToken', response.data.token);
-    sessionStorage.setItem('userId', response.data.user.id);
-    dispatch(login([response.data.user.id,response.data.user.username]));
-    closeModal();
-    if(response.data.user.role == 'admin') navigate('/managepage');
-  } catch (error) {
-    console.log('로그인 실패:', error);
-    alert('로그인 중 오류가 발생했습니다.');
-  }
-};
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post('http://localhost:3002/login', {
+        id: loginId,
+        password: loginPw,
+        role: loginRole,
+      });
 
-//회원가입 함수
-const handleSignup = async (data) => {
-  try {
-    const response = await axios.post('/register', {
-      username: data.username,
-      id: data.id,
-      password: data.password,
-      birthday: data.birthdate,
-      phone_num: data.phone_num,
-      is_disabled: data.is_disabled,
-      special_notes: data.special_notes
-    })
-    console.log('회원가입 성공', response);
-    dispatch(toggleMode());
+      sessionStorage.setItem('accessToken', response.data.token);
+      sessionStorage.setItem('userId', response.data.user.id);
 
-  } catch (error) {
-    console.log('회원가입 실패:', error);
-    alert('회원가입에 실패했습니다.')
-  }
-};
-
-    const openLogin = () => {
-      setShowModal(true);
-      setShowSignup(false);
-    };
-    const closeLogin = () => setShowModal(false);
-    const openSignup = () => {
       setShowModal(false);
-      setShowSignup(true);
-    };
-    const closeSignup = () => setShowSignup(false);
+      navigate(response.data.user.role === 'admin' ? '/managepage' : '/homepage');
+    } catch (error) {
+      console.error('로그인 실패:', error);
+      alert('로그인에 실패했습니다.');
+    }
+  };
+
+  const handleSignup = async () => {
+    try {
+      await axios.post('http://localhost:3002/register', {
+        username: name,
+        id: userId,
+        password,
+        birthday: '', // 생일 항목이 있다면 state에 추가 필요
+        phone_num: phone,
+        is_disabled: isCertified,
+        special_notes: etc,
+      });
+      setIsLoginMode(true);
+    } catch (error) {
+      console.error('회원가입 실패:', error);
+      alert('회원가입에 실패했습니다.');
+    }
+  };
+
   return (
     <PageWrapper>
-      <Header>
-        <LogoText>LOGOTEXT</LogoText>
-      </Header>
+      <Header><LogoText>LOGOTEXT</LogoText></Header>
 
       <ImageWrapper>
         <StyledImage src={subway} alt="지하철 이미지" />
       </ImageWrapper>
 
       <ButtonWrapper>
-      <CustomButton onClick={openLogin}>로그인</CustomButton>
+        <CustomButton onClick={() => { setIsLoginMode(true); setShowModal(true); }}>로그인</CustomButton>
       </ButtonWrapper>
 
-      
-      const [loginId, setLoginId] = useState('');
-      const [loginPw, setLoginPw] = useState('');
-      const [loginRole, setLoginRole] = useState('user');
-
-      {/* 로그인 모달 */}
+      {/* 로그인/회원가입 모달 */}
       <ModalOverlay show={showModal} onClick={() => setShowModal(false)}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
-          <ModalTitle>로그인</ModalTitle>
-          <Input type="text" placeholder="ID" value={loginId} onChange={(e) => setLoginId(e.target.value)} />
-          <Input type="password" placeholder="PW" value={loginPw} onChange={(e) => setLoginPw(e.target.value)} />
-          <ConfirmButton onClick={handleLogin}>확인</ConfirmButton>
-          <SignupLink onClick={() => { setShowModal(false); setShowSignup(true); }}>회원가입하기</SignupLink>
-        </ModalContent>
-      </ModalOverlay>
+          <ModalTitle>{isLoginMode ? '로그인' : '회원가입'}</ModalTitle>
 
-      {/* 회원가입 모달 */}
-      <ModalOverlay show={showSignup} onClick={() => setShowSignup(false)}>
-        <ModalContent onClick={(e) => e.stopPropagation()}>
-          <ModalTitle>회원가입</ModalTitle>
-          <Input type="text" placeholder="이름 (필수)" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input type="tel" placeholder="전화번호 (필수)" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <Input type="text" placeholder="아이디 (필수)" value={userId} onChange={(e) => setUserId(e.target.value)} />
-          <Input type="password" placeholder="비밀번호 (필수)" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <Input type="password" placeholder="비밀번호 확인 (필수)" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
-          <CheckboxWrapper>
-            <CheckboxInput
-              type="checkbox"
-              checked={isCertified}
-              onChange={(e) => setIsCertified(e.target.checked)}
-            />
-            청각장애인 인증 (필수)
-          </CheckboxWrapper>
-          <Input type="text" placeholder="기타 (기저질환 등, 선택)" value={etc} onChange={(e) => setEtc(e.target.value)} />
-          <ConfirmButton disabled={!isFormValid || password !== confirmPw} onClick={handleSignup}>
-            가입하기
-          </ConfirmButton>
+          {isLoginMode ? (
+            <>
+              <Input type="text" placeholder="ID" value={loginId} onChange={(e) => setLoginId(e.target.value)} />
+              <Input type="password" placeholder="PW" value={loginPw} onChange={(e) => setLoginPw(e.target.value)} />
+              <ConfirmButton onClick={handleLogin}>확인</ConfirmButton>
+              <SignupLink onClick={() => setIsLoginMode(false)}>회원가입하기</SignupLink>
+            </>
+          ) : (
+            <>
+              <Input type="text" placeholder="이름 (필수)" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input type="tel" placeholder="전화번호 (필수)" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Input type="text" placeholder="아이디 (필수)" value={userId} onChange={(e) => setUserId(e.target.value)} />
+              <Input type="password" placeholder="비밀번호 (필수)" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input type="password" placeholder="비밀번호 확인 (필수)" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
+              <CheckboxWrapper>
+                <CheckboxInput type="checkbox" checked={isCertified} onChange={(e) => setIsCertified(e.target.checked)} />
+                청각장애인 인증 (필수)
+              </CheckboxWrapper>
+              <Input type="text" placeholder="기타 (기저질환 등, 선택)" value={etc} onChange={(e) => setEtc(e.target.value)} />
+              <ConfirmButton disabled={!isFormValid} onClick={handleSignup}>가입하기</ConfirmButton>
+              <SignupLink onClick={() => setIsLoginMode(true)}>로그인으로 돌아가기</SignupLink>
+            </>
+          )}
         </ModalContent>
       </ModalOverlay>
     </PageWrapper>
