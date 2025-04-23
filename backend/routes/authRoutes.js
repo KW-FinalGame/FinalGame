@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
-const User = require('./models/user');
+const User = require('../models/user');
 const router = express.Router();
 require('dotenv').config();
 

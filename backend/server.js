@@ -1,4 +1,5 @@
 require('dotenv').config(); // 환경변수 로드
+const express = require('express');
 const app = express();
 const path = require('path');
 const mongoose = require('mongoose');
@@ -7,7 +8,7 @@ const cors = require('cors');
 const http = require('http'); // http 모듈 추가
 const server = http.createServer(app); // http 서버 생성
 const authRoutes = require('./routes/authRoutes'); // 라우터 파일 가져오기
-const gameLevel1 = require('./routes/signRoutes');
+const signRoutes = require('./routes/signRoutes');
 
 
 // MongoDB 연결 설정
