@@ -48,8 +48,6 @@ const authenticateToken = (req, res, next) => {
 app.use('/', authRoutes); // '/' 경로로 authRoutes를 설정
 app.use('/', signRoutes); // roomRoutes 추가
 app.use('/', mapRoutes);
-
-app.use('/', signRoutes); // roomRoutes 추가, /api 경로에서 사용
 app.use('/', subwayRoutes);
 
 // 배포 시 활성화 할 부분
