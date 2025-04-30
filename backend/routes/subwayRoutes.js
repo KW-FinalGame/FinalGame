@@ -13,7 +13,7 @@ if (!apiKey) {
 router.get('/subway', (req, res) => {
   console.log('Subway API 호출됨'); // 라우트 접근 로그
 
-  const url = `http://openapi.seoul.go.kr:8088/${apiKey}/json/CardSubwayStatsNew/1/5/20220301`;
+  const url = `http://openapi.seoul.go.kr:8088/${apiKey}/json/StationAdresTelno/1/5/`;
   console.log('요청 URL:', url); // API 요청 URL 로그
 
   request({ url, method: 'GET' }, (error, response, body) => {
