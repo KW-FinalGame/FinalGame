@@ -99,43 +99,34 @@ function Cam() {
 
   useEffect(() => {
     console.log("Cam 컴포넌트 마운트");
-    
-    // 고객으로 접속 알림
+
     socket.emit('join-as-customer');
     console.log("고객으로 접속 알림 전송");
-    
-    // 역무원 상태 체크
+
     socket.on('manager-status', (data) => {
       console.log("역무원 상태 업데이트:", data);
       setManagerOnline(data.connected);
-      
-      // 역무원이 연결된 경우에만 WebRTC 시작
+
       if (data.connected) {
         initializeWebRTC();
       }
     });
 
-    // WebRTC 초기화 함수
     const initializeWebRTC = async () => {
       console.log("WebRTC 초기화 시작");
       try {
-        // 웹캠 스트림 가져오기
-        console.log("웹캠 스트림 요청 중...");
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true,
-          audio: true // 오디오도 포함 (필요시)
-        });
-        console.log("웹캠 스트림 획득 성공");
-        streamRef.current = stream;
-
-        // 웹캠 비디오에 스트림 연결
-        if (webcamRef.current && webcamRef.current.video) {
-          console.log("웹캠 비디오에 스트림 연결");
-          webcamRef.current.video.srcObject = stream;
+        let checkCount = 0;
+        while (!webcamRef.current || !webcamRef.current.stream) {
+          console.log("웹캠 스트림 대기 중...");
+          await new Promise(resolve => setTimeout(resolve, 100));
+          checkCount++;
+          if (checkCount > 50) throw new Error("웹캠 스트림 초기화 실패");
         }
 
-        // RTCPeerConnection 생성
-        console.log("RTCPeerConnection 생성 중");
+        const stream = webcamRef.current.stream;
+        streamRef.current = stream;
+        console.log("웹캠 스트림 획득 성공:", stream);
+
         const peer = new RTCPeerConnection({
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' }
@@ -144,59 +135,33 @@ function Cam() {
         peerRef.current = peer;
         console.log("RTCPeerConnection 생성됨");
 
-        // 스트림에서 트랙 추가
-        console.log("스트림에서 트랙 추가 중");
         stream.getTracks().forEach(track => {
           console.log(`트랙 추가: ${track.kind}`);
           peer.addTrack(track, stream);
         });
 
-        // 연결 상태 변경 이벤트
-        peer.onconnectionstatechange = (event) => {
-          console.log("연결 상태 변경:", peer.connectionState);
-        };
-        
-        // ICE 연결 상태 변경 이벤트
-        peer.oniceconnectionstatechange = (event) => {
-          console.log("ICE 연결 상태 변경:", peer.iceConnectionState);
-        };
-
-        // ICE 후보 생성 이벤트
         peer.onicecandidate = (event) => {
           if (event.candidate) {
-            console.log("ICE 후보 생성:", event.candidate);
             socket.emit('ice-candidate', event.candidate);
+            console.log("ICE 후보 전송:", event.candidate);
           }
         };
-        
-        // 시그널링 상태 변경 이벤트
-        peer.onsignalingstatechange = (event) => {
-          console.log("시그널링 상태 변경:", peer.signalingState);
-        };
 
-        // 오퍼 생성 및 전송
-        console.log("오퍼 생성 중");
+        await new Promise(resolve => setTimeout(resolve, 100));
         const offer = await peer.createOffer();
-        console.log("오퍼 생성됨:", offer);
-        
-        console.log("로컬 설명 설정 중");
         await peer.setLocalDescription(offer);
-        console.log("로컬 설명 설정됨");
-        
-        console.log("오퍼 전송 중");
         socket.emit('offer', offer);
         console.log("오퍼 전송됨");
+
       } catch (error) {
-        console.error('웹캠 접근 오류:', error);
+        console.error('WebRTC 초기화 중 오류:', error.message);
       }
     };
 
-    // 원격 답변 처리
     socket.on('answer', async (answer) => {
       console.log("답변 수신:", answer);
       try {
         if (peerRef.current && peerRef.current.signalingState !== 'closed') {
-          console.log("원격 설명 설정 중");
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(answer));
           console.log("원격 설명 설정됨");
         } else {
@@ -207,12 +172,10 @@ function Cam() {
       }
     });
 
-    // ICE 후보 처리
     socket.on('ice-candidate', async (candidate) => {
       console.log("ICE 후보 수신:", candidate);
       try {
         if (peerRef.current && peerRef.current.signalingState !== 'closed') {
-          console.log("ICE 후보 추가 중");
           await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
           console.log("ICE 후보 추가됨");
         } else {
@@ -223,33 +186,33 @@ function Cam() {
       }
     });
 
-    // WebRTC 초기화
+    // ✅ 역무원에게서 요청받으면 offer 재전송
+    socket.on('request-offer', async () => {
+      console.log("request-offer 이벤트 수신 → 오퍼 재전송");
+      if (peerRef.current && streamRef.current) {
+        const offer = await peerRef.current.createOffer();
+        await peerRef.current.setLocalDescription(offer);
+        socket.emit('offer', offer);
+        console.log("오퍼 재전송 완료");
+      }
+    });
+
     initializeWebRTC();
 
-    // 컴포넌트 정리 함수
     return () => {
       console.log("Cam 컴포넌트 언마운트");
-      
-      // 소켓 이벤트 리스너 제거
       socket.off('answer');
       socket.off('ice-candidate');
       socket.off('manager-status');
+      socket.off('request-offer');
 
-      // 스트림 트랙 중지
       if (streamRef.current) {
-        console.log("스트림 트랙 정리 중");
-        streamRef.current.getTracks().forEach(track => {
-          track.stop();
-          console.log(`트랙 중지됨: ${track.kind}`);
-        });
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
 
-      // Peer 연결 종료
       if (peerRef.current) {
-        console.log("RTCPeerConnection 닫는 중");
         peerRef.current.close();
         peerRef.current = null;
-        console.log("RTCPeerConnection 닫힘");
       }
     };
   }, []);
@@ -263,7 +226,7 @@ function Cam() {
       <Header>
         <LogoText>LOGOTEXT</LogoText>
       </Header>
-      
+
       <TextBox>
         <strong>{stationName}</strong> 의 역무원
       </TextBox>
