@@ -3,8 +3,8 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 
+// 전역 소켓만 사용, 전역 peer 제거
 const socket = io('http://localhost:3002');
-const peer = new RTCPeerConnection();
 
 const PageWrapper = styled.div`
   display: flex;
@@ -75,85 +75,158 @@ const RoundButton = styled.button`
 function Mancam() {
   const navigate = useNavigate();
   const remoteVideoRef = useRef(null);
-  const [isConnected, setIsConnected] = useState(false); // 연결 상태 추가
+  const [isConnected, setIsConnected] = useState(false);
   const peerRef = useRef(null);
+  const remoteStreamRef = useRef(null); // 원격 스트림을 저장하기 위한 ref 추가
+  const [videoMounted, setVideoMounted] = useState(false); // 비디오 요소 마운트 상태 추가
+  
+  // 디버깅을 위한 상태 추가
+  const [debug, setDebug] = useState('초기화 중...');
 
   useEffect(() => {
-    if (peerRef.current) {
-      peerRef.current.close();
-      peerRef.current = null;
-    }
-
-  const peer = new RTCPeerConnection();
-  peerRef.current = peer;
-
+    console.log("Mancam 컴포넌트 마운트");
+  
+    // 역무원으로 접속 알림
     socket.emit('join-as-manager');
-
-    socket.on('offer', async (offer) => {
-      try {
-        // 오퍼를 받은 후 원격 설명을 설정
-        await peer.setRemoteDescription(new RTCSessionDescription(offer));
-
-        // 응답을 생성
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-        socket.emit('answer', answer); // 응답을 서버로 전송
-      } catch (error) {
-        console.error('Error handling offer:', error);
-      }
+    console.log("역무원으로 접속 알림 전송");
+  
+    // 새로운 RTCPeerConnection 생성
+    const peer = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' }
+      ]
     });
-
+    peerRef.current = peer;
+    console.log("RTCPeerConnection 생성됨");
+  
+    // 원격 트랙 수신 이벤트 리스너
     peer.ontrack = (event) => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
+      console.log("트랙 수신됨:", event);
+      console.log("event.streams:", event.streams);
+      console.log("event.track:", event.track);
+      console.log("remoteVideoRef.current:", remoteVideoRef.current);
+      
+      // 스트림을 ref에 저장
+      if (event.streams && event.streams[0]) {
+        remoteStreamRef.current = event.streams[0];
+        
+        // 비디오 요소가 있으면 바로 설정
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          setIsConnected(true);
+          console.log("비디오 엘리먼트에 원격 스트림 설정 완료");
+        } else {
+          console.log("remoteVideoRef가 아직 준비되지 않음, 스트림은 저장됨");
+        }
       }
     };
-
+  
+    // 연결 상태 변경 이벤트 리스너
+    peer.onconnectionstatechange = (event) => {
+      console.log("연결 상태 변경:", peer.connectionState);
+      setDebug(`연결 상태: ${peer.connectionState}`);
+    };
+  
+    // ICE 연결 상태 변경 이벤트 리스너
+    peer.oniceconnectionstatechange = (event) => {
+      console.log("ICE 연결 상태 변경:", peer.iceConnectionState);
+    };
+  
+    // ICE 후보 생성 이벤트 리스너
     peer.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log("ICE 후보 생성:", event.candidate);
         socket.emit('ice-candidate', event.candidate);
       }
     };
-
-    socket.on('ice-candidate', async (candidate) => {
+  
+    // 시그널링 상태 변경 이벤트 리스너
+    peer.onsignalingstatechange = (event) => {
+      console.log("시그널링 상태 변경:", peer.signalingState);
+    };
+  
+    // 오퍼 수신 처리
+    socket.on('offer', async (offer) => {
+      console.log("오퍼 수신:", offer);
       try {
-        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+        setDebug('오퍼 수신됨, 처리 중...');
+        if (!peerRef.current) return;
+  
+        // 중복 수신 방지 및 상태 확인
+        if (peerRef.current.signalingState !== 'stable') {
+          console.warn('신호 상태 안정적이지 않음, offer 무시');
+          return;
+        }
+  
+        // 원격 설명 설정
+        await peer.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log("원격 설명 설정 완료");
+  
+        // 응답 생성
+        const answer = await peer.createAnswer();
+        console.log("응답 생성됨:", answer);
+  
+        // 로컬 설명 설정
+        await peer.setLocalDescription(answer);
+        console.log("로컬 설명 설정 완료");
+  
+        // 응답 전송
+        socket.emit('answer', answer);
+        console.log("응답 전송됨");
+  
+        setDebug('응답 전송 완료, 연결 대기 중...');
       } catch (error) {
-        console.error('Error adding ice candidate:', error);
+        console.error('오퍼 처리 오류:', error);
+        setDebug(`오류 발생: ${error.message}`);
       }
     });
-
-    // 고객 화면 송출을 위한 offer 요청
-    const startWebRTC = async () => {
+  
+    // ICE 후보 수신 처리
+    socket.on('ice-candidate', async (candidate) => {
+      console.log("ICE 후보 수신:", candidate);
       try {
-        // 고객의 웹캠을 가져오는 부분
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-
-        // 스트림을 peer 연결에 추가
-        stream.getTracks().forEach((track) => peer.addTrack(track, stream));
-
-        // 오퍼 생성
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-
-        // 오퍼를 서버로 전송
-        socket.emit('offer', offer);
-
-        setIsConnected(true); // 연결 성공 상태 변경
+        if (peer.signalingState !== 'closed') {
+          await peer.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log("ICE 후보 추가됨");
+        }
       } catch (error) {
-        console.error('WebRTC 오류:', error);
+        console.error('ICE 후보 처리 오류:', error);
       }
-    };
-
-    startWebRTC(); // WebRTC 시작
-
+    });
+  
+    // 컴포넌트 언마운트 시 정리
     return () => {
+      console.log("Mancam 컴포넌트 언마운트");
+  
+      // 이벤트 리스너 제거
+      socket.off('offer');
+      socket.off('ice-candidate');
+  
+      // 원격 비디오 스트림 정리
+      if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
+        const tracks = remoteVideoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        remoteVideoRef.current.srcObject = null;
+      }
+  
+      // RTCPeerConnection 종료
       if (peerRef.current) {
         peerRef.current.close();
         peerRef.current = null;
       }
     };
   }, []);
+  
+  // 비디오 마운트 상태와 스트림 상태를 함께 관찰하여 연결 설정
+  useEffect(() => {
+    console.log("비디오 마운트 상태 변경 감지:", videoMounted);
+    console.log("스트림 상태:", !!remoteStreamRef.current);
+    
+    if (videoMounted && remoteStreamRef.current) {
+      console.log("비디오 마운트됨 & 스트림 있음 -> 연결 설정");
+      setIsConnected(true);
+    }
+  }, [videoMounted, remoteStreamRef.current]);
 
   const goBackToManage = () => {
     navigate('/manage');
@@ -165,14 +238,33 @@ function Mancam() {
         <LogoText>LOGOTEXT</LogoText>
       </Header>
 
+      {isConnected ? (
       <WebcamBox>
         <video
-          ref={remoteVideoRef}
+          ref={(el) => {
+            remoteVideoRef.current = el;
+            if (el) {
+              console.log("비디오 요소 마운트됨");
+              setVideoMounted(true);
+              // 저장된 스트림이 있으면 바로 설정
+              if (remoteStreamRef.current) {
+                console.log("마운트 시 저장된 스트림으로 비디오 설정");
+                el.srcObject = remoteStreamRef.current;
+                el.onloadedmetadata = () => {
+                  console.log("비디오 메타데이터 로드됨, 재생 시도");
+                  el.play().catch(e => console.error("비디오 재생 실패:", e));
+                };
+              }
+            }
+          }}
           autoPlay
           playsInline
           style={{ width: '100%', height: '100%' }}
         />
       </WebcamBox>
+    ) : (
+      <TextBox>사용자 연결 대기 중...</TextBox>
+    )}
 
       <TextBox>
         여기에 사용자의 수화를 인식한 텍스트가 나와요.
