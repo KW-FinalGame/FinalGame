@@ -59,6 +59,50 @@ app.use('/', subwayRoutes);
 //   res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
 // });
 
+
+
+const { Server } = require('socket.io');
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3000', // 프론트 주소
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Socket.io (역무원 접속 상태 및 WebRTC signaling)
+io.on('connection', (socket) => {
+  console.log('🔌 연결됨');
+
+  socket.on('join-as-manager', () => {
+    console.log('👨‍💼 역무원 접속');
+    socket.broadcast.emit('manager-status', { connected: true });
+  });
+
+  socket.on('join-as-customer', () => {
+    console.log('👤 고객 접속');
+  });
+
+  socket.on('disconnect', () => {
+    console.log('❌ 연결 해제');
+    socket.broadcast.emit('manager-status', { connected: false });
+  });
+
+  // WebRTC signaling 중계
+  socket.on('offer', (offer) => {
+    socket.broadcast.emit('offer', offer);
+  });
+
+  socket.on('answer', (answer) => {
+    socket.broadcast.emit('answer', answer);
+  });
+
+  socket.on('ice-candidate', (candidate) => {
+    socket.broadcast.emit('ice-candidate', candidate);
+  });
+});
+
+
 // 서버 실행
 const PORT = 3002;
 server.listen(PORT, '0.0.0.0', () => { // server 객체로 변경
