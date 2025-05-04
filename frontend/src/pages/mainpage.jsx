@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import subway from "../assets/imgs/subway.png";
+import axios from 'axios';
 
 // 호선별 색상 매핑
 const lineColors = {
@@ -211,6 +212,7 @@ const OpenButton = styled.button`
     background-color: #73CD37;
   }
 `;
+
 const CloseButton = styled.button`
   background-color: #EE3232;
   font-size: 23px;
@@ -227,23 +229,23 @@ const CloseButton = styled.button`
 `;
 
 function Main() {
+  const [stations, setStations] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
   const navigate = useNavigate();
 
-  // 샘플 데이터 (API로 바꿔도 OK)
-  const nearbyStations = [
-    { name: "서울역", line: 1 },
-    { name: "충정로", line: 2 },
-    { name: "신촌", line: 2 },
-    { name: "공덕", line: 5 },
-    { name: "종로3가", line: 3 },
-    { name: "명동", line: 4 },
-    { name: "충정로", line: 2 },
-    { name: "신촌", line: 2 },
-    { name: "공덕", line: 5 },
-    { name: "종로3가", line: 3 },
-    { name: "명동", line: 4 },
-  ];
+  // API 호출 함수
+  const fetchStations = async () => {
+    try {
+      const response = await axios.get('YOUR_API_URL_HERE'); // 여기에 API URL을 넣어주세요
+      setStations(response.data); // API 응답 데이터로 stations 상태 업데이트
+    } catch (error) {
+      console.error("Error fetching stations:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchStations(); // 컴포넌트가 마운트될 때 API 호출
+  }, []);
 
   const handleStationClick = (stationName) => {
     setSelectedStation(stationName); // 클릭한 역 이름 저장
@@ -252,6 +254,7 @@ function Main() {
   const closeModal = () => {
     setSelectedStation(null); // 모달 닫기
   };
+
   const OpenCam = () => {
     navigate('/cam', { state: { stationName: selectedStation } });
   };
@@ -271,7 +274,7 @@ function Main() {
         <GrayBox>
           <Title>해당 역을 선택하세요!</Title>
           <StationList>
-            {nearbyStations.map((station, index) => (
+            {stations.map((station, index) => (
               <StationItem key={index} onClick={() => handleStationClick(station.name)}>
                 <LineCircle line={station.line}>{station.line}</LineCircle>
                 <StationName>{station.name}</StationName>
