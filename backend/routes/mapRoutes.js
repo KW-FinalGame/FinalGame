@@ -1,132 +1,119 @@
 const express = require('express');
 const axios = require('axios');
-const router = express();
 require('dotenv').config();
 
+const router = express();
 
-const REST_API_KEY = process.env.REST_API_KEY;
 const SUBWAY_API_KEY = process.env.SUBWAY_API_KEY;
+const REST_API_KEY = process.env.REST_API_KEY;
 
-router.use(express.json());
-
-// 프론트에 JavaScript SDK URL 내려주는 라우터
-router.get('/kakao-map-sdk-url', (req, res) => {
-  const JS_APP_KEY = '14ae4068b0ad57acf6244832ab6358e2';
-  const url = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${JS_APP_KEY}&libraries=services,clusterer,drawing`;
-  res.json({ url });
-});
-
-
-// 좌표를 주소로 변환하는 API, 내 위치 정보 사용할 때
-router.post('/reverse-geocode', async (req, res) => {
-  const { latitude, longitude } = req.body;
-
-  try {
-    const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${longitude}&y=${latitude}`;
-    const response = await axios.get(url, {
-      headers: { Authorization: `KakaoAK ${REST_API_KEY}` }
-    });
-    res.json(response.data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: '카카오 서버 호출 에러' });
-  }
-});
-
-// 주소를 좌표로 변환하는 API
-router.post('/search-address', async (req, res) => {
-    const { address } = req.body;
-  
-    try {
-      const url = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(address)}`;
-      const response = await axios.get(url, {
-        headers: { Authorization: `KakaoAK ${REST_API_KEY}` }
-      });
-      res.json(response.data);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: '카카오 서버 호출 에러' });
-    }
-  });
-
-// -------------------------------------------------------------------
- 
-// 거리 계산 함수 (Haversine 공식)
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const deg2rad = deg => deg * (Math.PI / 180);
-  const R = 6371; // 지구 반지름 (단위: km)
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
+const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) ** 2;
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+};
+
+// ✅ p-limit 대체: 동시 요청 수 제한 유틸
+function createLimit(concurrency) {
+  let activeCount = 0;
+  const queue = [];
+
+  const next = () => {
+    if (queue.length === 0 || activeCount >= concurrency) return;
+    activeCount++;
+    const { fn, resolve } = queue.shift();
+    fn().then((result) => {
+      resolve(result);
+      activeCount--;
+      next();
+    });
+  };
+
+  return (fn) =>
+    new Promise((resolve) => {
+      queue.push({ fn, resolve });
+      next();
+    });
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const limit = createLimit(5); // ✅ 동시에 5개까지만 요청 허용
 
 router.post('/nearby-subway-stations', async (req, res) => {
   const { latitude, longitude } = req.body;
-  const subwayApiUrl = `http://openapi.seoul.go.kr:8088/${SUBWAY_API_KEY}/json/StationAdresTelno/1/1000/`;
+  const subwayApiUrl = `http://openapi.seoul.go.kr:8088/${SUBWAY_API_KEY}/json/StationAdresTelno/1/300/`;
 
   try {
     const subwayResponse = await axios.get(subwayApiUrl);
-    const stations = subwayResponse.data.StationAdresTelno.row;
+    const stationData = subwayResponse?.data?.StationAdresTelno?.row;
 
-    const results = [];
+    if (!stationData || stationData.length === 0) {
+      console.error("❌ 열린데이터 API 응답에 row가 없음:", subwayResponse.data);
+      return res.status(500).json({ error: "지하철 데이터가 없습니다." });
+    }
 
-    for (const station of stations) {
-      const searchUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(station.ADRES)}`;
-      try {
-        const kakaoRes = await axios.get(searchUrl, {
-          headers: { Authorization: `KakaoAK ${REST_API_KEY}` }
-        });
-    
-        const documents = kakaoRes.data.documents;
-        if (documents.length === 0) {
-          console.log(`❌ 변환 실패: ${station.STATION_NM} (${station.ADRES})`);
-          continue;
+    console.log("📡 역 정보 예시:", stationData[0]);
+
+    const stationPromises = stationData.map((station, index) =>
+      limit(async () => {
+        const address = station.ROAD_NM_ADDR || station.OLD_ADDR;
+
+        if (!address || !station.SBWY_STNS_NM) {
+          console.warn(`⚠️ 누락된 역 정보 [${index}]:`, station);
+          return null;
         }
-    
-        const stationLat = parseFloat(documents[0].y);
-        const stationLon = parseFloat(documents[0].x);
-        const distance = getDistanceFromLatLonInKm(latitude, longitude, stationLat, stationLon);
-        console.log(`📍 ${station.STATION_NM} 거리: ${distance.toFixed(2)}km`);
-    
-        if (distance <= 3) {
-          results.push({
-            name: station.STATION_NM,
-            line: station.LINE_NUM,
-            address: station.ADRES,
+
+        const searchUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(address)}`;
+
+        try {
+          const kakaoRes = await axios.get(searchUrl, {
+            headers: { Authorization: `KakaoAK ${REST_API_KEY}` }
+          });
+
+          const documents = kakaoRes.data.documents;
+          if (!documents || documents.length === 0) return null;
+
+          const stationLat = parseFloat(documents[0].y);
+          const stationLon = parseFloat(documents[0].x);
+          const distance = getDistanceFromLatLonInKm(latitude, longitude, stationLat, stationLon);
+          //console.log(`✅ ${station.SBWY_STNS_NM} 거리: ${distance.toFixed(2)}km`); -> 거리 보는 건데 하는 순간 로그 겁나 떠서 무서움움
+
+
+          return {
+            name: station.SBWY_STNS_NM,
+            line: station.SBWY_ROUT_LN,
+            address: address,
             tel: station.TELNO,
             latitude: stationLat,
             longitude: stationLon,
             distance_km: parseFloat(distance.toFixed(2))
-          });
+          };
+        } catch (e) {
+          console.error(`❌ 변환 실패: ${station.SBWY_STNS_NM} (${address})`, e.message);
+          return null;
         }
-    
-        await delay(150);
-      } catch (e) {
-        console.error(`카카오 변환 실패 - ${station.STATION_NM}:`, e.message);
-        continue;
-      }
-    }
-    
+      })
+    );
 
-    results.sort((a, b) => a.distance_km - b.distance_km);
+    const results = await Promise.all(stationPromises);
+    const filtered = results
+      .filter(st => st && st.distance_km <= 50) // ✅ 범위 넓힘
+      .sort((a, b) => a.distance_km - b.distance_km)
+      .slice(0, 10); // ✅ 10개 제한
 
-    console.log('📦 프론트에 전달할 지하철역 리스트:', results);
-    res.json(results);
+
+    console.log('📦 프론트에 전달할 지하철역 리스트:', filtered);
+    res.json(filtered);
   } catch (error) {
-    console.error('지하철 역 정보 가져오기 실패:', error);
-    res.status(500).json({ error: '지하철 역 정보 조회 실패' });
+    console.error('❌ 열린데이터 API 호출 실패:', error.message);
+    res.status(500).json({ error: '지하철 역 조회 실패' });
   }
 });
-
-
 
 module.exports = router;
