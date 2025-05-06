@@ -65,59 +65,68 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// 사용자 위치를 받아서 가까운 지하철역 정렬
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 router.post('/nearby-subway-stations', async (req, res) => {
   const { latitude, longitude } = req.body;
-
   const subwayApiUrl = `http://openapi.seoul.go.kr:8088/${SUBWAY_API_KEY}/json/StationAdresTelno/1/1000/`;
 
   try {
     const subwayResponse = await axios.get(subwayApiUrl);
     const stations = subwayResponse.data.StationAdresTelno.row;
 
-    const stationPromises = stations.map(async (station) => {
+    const results = [];
+
+    for (const station of stations) {
       const searchUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(station.ADRES)}`;
       try {
         const kakaoRes = await axios.get(searchUrl, {
           headers: { Authorization: `KakaoAK ${REST_API_KEY}` }
         });
-
+    
         const documents = kakaoRes.data.documents;
-        if (documents.length === 0) return null;
-
+        if (documents.length === 0) {
+          console.log(`❌ 변환 실패: ${station.STATION_NM} (${station.ADRES})`);
+          continue;
+        }
+    
         const stationLat = parseFloat(documents[0].y);
         const stationLon = parseFloat(documents[0].x);
         const distance = getDistanceFromLatLonInKm(latitude, longitude, stationLat, stationLon);
-
-        return {
-          name: station.STATION_NM,
-          line: station.LINE_NUM,
-          address: station.ADRES,
-          tel: station.TELNO,
-          latitude: stationLat,
-          longitude: stationLon,
-          distance_km: parseFloat(distance.toFixed(2))
-        };
+        console.log(`📍 ${station.STATION_NM} 거리: ${distance.toFixed(2)}km`);
+    
+        if (distance <= 3) {
+          results.push({
+            name: station.STATION_NM,
+            line: station.LINE_NUM,
+            address: station.ADRES,
+            tel: station.TELNO,
+            latitude: stationLat,
+            longitude: stationLon,
+            distance_km: parseFloat(distance.toFixed(2))
+          });
+        }
+    
+        await delay(150);
       } catch (e) {
         console.error(`카카오 변환 실패 - ${station.STATION_NM}:`, e.message);
-        return null;
+        continue;
       }
-    });
+    }
+    
 
-    const resolved = await Promise.all(stationPromises);
-    const filtered = resolved
-      .filter(station => station && station.distance_km <= 3)
-      .sort((a, b) => a.distance_km - b.distance_km);
+    results.sort((a, b) => a.distance_km - b.distance_km);
 
-    // ✅ 프론트로 보내기 직전 데이터 확인
-    console.log('📦 프론트에 전달할 지하철역 리스트:', filtered);
-
-    res.json(filtered);
+    console.log('📦 프론트에 전달할 지하철역 리스트:', results);
+    res.json(results);
   } catch (error) {
     console.error('지하철 역 정보 가져오기 실패:', error);
     res.status(500).json({ error: '지하철 역 정보 조회 실패' });
   }
 });
+
 
 
 module.exports = router;

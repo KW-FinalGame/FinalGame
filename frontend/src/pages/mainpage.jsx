@@ -235,25 +235,34 @@ function Main() {
 
   //api 호출 함수
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
-      console.log('📍 현재 위치:', latitude, longitude);
+    let isCalled = false; // ✅ 중복 호출 방지용 플래그
   
-      try {
-        const response = await axios.post('http://localhost:3002/nearby-subway-stations', {
-          latitude,
-          longitude
-        });
+    if (!isCalled) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          console.log('📍 현재 위치:', latitude, longitude);
   
-        console.log('📡 서버 응답:', response.data);
-        setStations(response.data);
-      } catch (error) {
-        console.error("❌ 역 정보 가져오기 실패:", error);
-      }
-    }, (err) => {
-      console.error("❌ 위치 권한이 거부됨:", err);
-    });
+          try {
+            const response = await axios.post('http://localhost:3002/nearby-subway-stations', {
+              latitude,
+              longitude
+            });
+  
+            console.log('📡 서버 응답:', response.data);
+            setStations(response.data);
+            isCalled = true; // ✅ 첫 호출 이후엔 다시 실행되지 않음
+          } catch (error) {
+            console.error('❌ 역 정보 가져오기 실패:', error);
+          }
+        },
+        (err) => {
+          console.error('❌ 위치 권한이 거부됨:', err);
+        }
+      );
+    }
   }, []);
+  
   
 
   const handleStationClick = (stationName) => {
