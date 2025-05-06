@@ -233,19 +233,28 @@ function Main() {
   const [selectedStation, setSelectedStation] = useState(null);
   const navigate = useNavigate();
 
-  // API 호출 함수
-  const fetchStations = async () => {
-    try {
-      const response = await axios.get('YOUR_API_URL_HERE'); // 여기에 API URL을 넣어주세요
-      setStations(response.data); // API 응답 데이터로 stations 상태 업데이트
-    } catch (error) {
-      console.error("Error fetching stations:", error);
-    }
-  };
-
+  //api 호출 함수
   useEffect(() => {
-    fetchStations(); // 컴포넌트가 마운트될 때 API 호출
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const { latitude, longitude } = position.coords;
+      console.log('📍 현재 위치:', latitude, longitude);
+  
+      try {
+        const response = await axios.post('http://localhost:3002/nearby-subway-stations', {
+          latitude,
+          longitude
+        });
+  
+        console.log('📡 서버 응답:', response.data);
+        setStations(response.data);
+      } catch (error) {
+        console.error("❌ 역 정보 가져오기 실패:", error);
+      }
+    }, (err) => {
+      console.error("❌ 위치 권한이 거부됨:", err);
+    });
   }, []);
+  
 
   const handleStationClick = (stationName) => {
     setSelectedStation(stationName); // 클릭한 역 이름 저장
