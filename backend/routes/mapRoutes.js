@@ -20,7 +20,7 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// ✅ p-limit 대체: 동시 요청 수 제한 유틸
+// p-limit 대체: 동시 요청 수 제한 유틸
 function createLimit(concurrency) {
   let activeCount = 0;
   const queue = [];
@@ -43,7 +43,7 @@ function createLimit(concurrency) {
     });
 }
 
-const limit = createLimit(5); // ✅ 동시에 5개까지만 요청 허용
+const limit = createLimit(5); // 동시에 5개까지만 요청 허용
 
 router.post('/nearby-subway-stations', async (req, res) => {
   const { latitude, longitude } = req.body;
@@ -54,18 +54,18 @@ router.post('/nearby-subway-stations', async (req, res) => {
     const stationData = subwayResponse?.data?.StationAdresTelno?.row;
 
     if (!stationData || stationData.length === 0) {
-      console.error("❌ 열린데이터 API 응답에 row가 없음:", subwayResponse.data);
+      console.error("열린데이터 API 응답에 row가 없음:", subwayResponse.data);
       return res.status(500).json({ error: "지하철 데이터가 없습니다." });
     }
 
-    console.log("📡 역 정보 예시:", stationData[0]);
+    console.log("역 정보 예시:", stationData[0]);
 
     const stationPromises = stationData.map((station, index) =>
       limit(async () => {
         const address = station.ROAD_NM_ADDR || station.OLD_ADDR;
 
         if (!address || !station.SBWY_STNS_NM) {
-          console.warn(`⚠️ 누락된 역 정보 [${index}]:`, station);
+          console.warn(`누락된 역 정보 [${index}]:`, station);
           return null;
         }
 
@@ -82,7 +82,7 @@ router.post('/nearby-subway-stations', async (req, res) => {
           const stationLat = parseFloat(documents[0].y);
           const stationLon = parseFloat(documents[0].x);
           const distance = getDistanceFromLatLonInKm(latitude, longitude, stationLat, stationLon);
-          //console.log(`✅ ${station.SBWY_STNS_NM} 거리: ${distance.toFixed(2)}km`); -> 거리 보는 건데 하는 순간 로그 겁나 떠서 무서움움
+          //console.log(`${station.SBWY_STNS_NM} 거리: ${distance.toFixed(2)}km`); -> 거리 보는 건데 하는 순간 로그 겁나 떠서 무서움움
 
 
           return {
@@ -105,13 +105,13 @@ router.post('/nearby-subway-stations', async (req, res) => {
     const filtered = results
       .filter(st => st && st.distance_km <= 50) // ✅ 범위 넓힘
       .sort((a, b) => a.distance_km - b.distance_km)
-      .slice(0, 10); // ✅ 10개 제한
+      .slice(0, 10); // 10개 제한
 
 
     console.log('📦 프론트에 전달할 지하철역 리스트:', filtered);
     res.json(filtered);
   } catch (error) {
-    console.error('❌ 열린데이터 API 호출 실패:', error.message);
+    console.error('열린데이터 API 호출 실패:', error.message);
     res.status(500).json({ error: '지하철 역 조회 실패' });
   }
 });
