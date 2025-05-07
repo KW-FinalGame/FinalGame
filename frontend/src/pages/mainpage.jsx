@@ -14,7 +14,7 @@ const lineColors = {
   6: '#CD7C2F',
   7: '#747F00',
   8: '#E6186C',
-  9: '#BDB092'
+  9: '#BDB092',
 };
 
 const PageWrapper = styled.div`
@@ -289,18 +289,22 @@ function Main() {
       </TopWrapper>
 
       <GrayBoxWrapper>
-        <GrayBox>
-          <Title>해당 역을 선택하세요!</Title>
-          <StationList>
-            {stations.map((station, index) => (
-              <StationItem key={index} onClick={() => handleStationClick(station.name)}>
-                <LineCircle line={station.line}>{station.line}</LineCircle>
-                <StationName>{station.name}</StationName>
-              </StationItem>
-            ))}
-          </StationList>
-        </GrayBox>
-      </GrayBoxWrapper>
+  <GrayBox>
+    <Title>해당 역을 선택하세요!</Title>
+    <StationList>
+      {stations.map((station, index) => {
+        const lineNumber = parseInt(station.line.toString().match(/\d+/)?.[0], 10);
+        return (
+          <StationItem key={index} onClick={() => handleStationClick(station.name)}>
+            <LineCircle line={lineNumber}>{lineNumber}</LineCircle>
+            <StationName>{station.name}</StationName>
+          </StationItem>
+        );
+      })}
+    </StationList>
+  </GrayBox>
+</GrayBoxWrapper>
+
 
       {/* 모달 창 */}
       {selectedStation && (
