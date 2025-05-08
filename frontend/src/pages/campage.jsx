@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import Webcam from 'react-webcam'; 
 import io from 'socket.io-client';
+import { isAuthenticated } from '../utils/auth';
 
 // 소켓 연결만 초기화
 const socket = io('http://localhost:3002');
@@ -98,6 +99,11 @@ function Cam() {
   const [isManConnected, setManagerOnline] = useState(false);
 
   useEffect(() => {
+    if (!isAuthenticated()) {
+      alert("로그인이 필요합니다.");
+      navigate('/');
+      return;
+    }
     console.log("Cam 컴포넌트 마운트");
     
     // 고객으로 접속 알림
@@ -253,7 +259,7 @@ function Cam() {
         console.log("RTCPeerConnection 닫힘");
       }
     };
-  }, []);
+  }, [navigate]);
 
   const goBackToMain = () => {
     navigate('/main');
