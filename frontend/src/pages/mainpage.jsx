@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import subway from "../assets/imgs/subway.png";
 import axios from 'axios';
+import { isAuthenticated } from '../utils/auth';
 
 // 호선별 색상 매핑
 const lineColors = {
@@ -234,6 +235,12 @@ function Main() {
   const [username, setUsername] = useState('');
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      alert("로그인이 필요합니다.");
+      navigate('/');
+    }
+  }, [navigate]);
 
   useEffect(() => {
     const storedName = sessionStorage.getItem('username');
