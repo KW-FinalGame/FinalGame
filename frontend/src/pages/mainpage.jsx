@@ -231,7 +231,16 @@ const CloseButton = styled.button`
 function Main() {
   const [stations, setStations] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
+  const [username, setUsername] = useState('');
   const navigate = useNavigate();
+
+
+  useEffect(() => {
+    const storedName = sessionStorage.getItem('username');
+    if (storedName) {
+      setUsername(storedName);
+    }
+  }, []);
 
   //api 호출 함수
   useEffect(() => {
@@ -285,7 +294,7 @@ function Main() {
 
       <TopWrapper>
         <SubwayLogo src={subway} alt="지하철 로고" />
-        <UserName>홍길동님!</UserName>
+          <UserName>{username}님</UserName> {/* ✅ 이름 출력 */}
       </TopWrapper>
 
       <GrayBoxWrapper>

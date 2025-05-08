@@ -193,6 +193,7 @@ function Home() {
 
       sessionStorage.setItem('accessToken', response.data.token);
       sessionStorage.setItem('userId', response.data.user.id);
+      sessionStorage.setItem('username', response.data.user.username);
 
       setShowModal(false);
       navigate(response.data.user.role === 'admin' ? '/manage' : '/main');
