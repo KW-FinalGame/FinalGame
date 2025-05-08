@@ -5,6 +5,8 @@ import styled from 'styled-components';
 import { Button } from 'react-bootstrap';
 import axios from 'axios';
 import subway from "../assets/imgs/subway.png"; 
+import logoImage from "../assets/imgs/logoImage.png";
+
 
 // ===== Styled Components =====
 const PageWrapper = styled.div`
@@ -14,24 +16,28 @@ const PageWrapper = styled.div`
 `;
 
 const Header = styled.header`
+  height: 120px;
   border-bottom: 3px solid #D9D9D9;
-  padding: 25px;
   text-align: center;
-`;
-
-const LogoText = styled.h1`
-  color: gray;
-  margin: 0;
-  font-size: 50px;
-  font-weight: bold;
+  padding: 0;
 
   @media (max-width: 768px) {
-    font-size: 30px;
+    height: 90px;
   }
+
   @media (max-width: 480px) {
-    font-size: 24px;
+    height: 110px;
   }
 `;
+
+
+const LogoImage = styled.img`
+  height: 100%;
+  padding:10px;
+  object-fit: contain;
+`;
+
+
 
 const ImageWrapper = styled.div`
   text-align: center;
@@ -47,7 +53,7 @@ const StyledImage = styled.img`
     width: 80%;
   }
   @media (max-width: 480px) {
-    width: 90%;
+    width: 100%;
   }
 `;
 
@@ -193,7 +199,6 @@ function Home() {
 
       sessionStorage.setItem('accessToken', response.data.token);
       sessionStorage.setItem('userId', response.data.user.id);
-      sessionStorage.setItem('username', response.data.user.username);
 
       setShowModal(false);
       navigate(response.data.user.role === 'admin' ? '/manage' : '/main');
@@ -223,7 +228,10 @@ function Home() {
 
   return (
     <PageWrapper>
-      <Header><LogoText>LOGOTEXT</LogoText></Header>
+      <Header>
+      <LogoImage src={logoImage} alt="로고 이미지" />
+    </Header>
+
 
       <ImageWrapper>
         <StyledImage src={subway} alt="지하철 이미지" />
