@@ -228,7 +228,18 @@ const CloseButton = styled.button`
     background-color: #EE3232;
   }
 `;
+const LogoutText = styled.div`
+  text-align: center;
+  font-size: 20px;
+  margin-top:-60px;
+  color: #666;
+  text-decoration: underline;
+  cursor: pointer;
 
+  &:hover {
+    color: #333;
+  }
+`;
 function Main() {
   const [stations, setStations] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
@@ -293,6 +304,11 @@ function Main() {
     navigate('/cam', { state: { stationName: selectedStation } });
   };
 
+  const handleLogout = () => {
+    sessionStorage.clear();
+    navigate('/');
+  };
+  
   return (
     <PageWrapper>
       <Header>
@@ -322,6 +338,7 @@ function Main() {
 </GrayBoxWrapper>
 
 
+<LogoutText onClick={handleLogout}>로그아웃</LogoutText> 
       {/* 모달 창 */}
       {selectedStation && (
         <ModalBackdrop>
