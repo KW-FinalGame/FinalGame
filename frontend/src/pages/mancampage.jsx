@@ -276,6 +276,10 @@ function Mancam() {
   const goBackToManage = () => {
     navigate('/manage');
   };
+  const handlePlayVideo = (videoId) => {
+    const url = `http://localhost:3002/videos/${videoId}.mp4`; // 예시 경로
+    socket.emit('trigger-play-db-video', url);
+  };
 
   return (
     <PageWrapper>
@@ -315,13 +319,13 @@ function Mancam() {
       </TextBox>
       <ButtonWrapper>
         <ButtonGrid>
-          <SmallButton>기다려주세요</SmallButton>
-          <SmallButton>문 열어드릴게요</SmallButton>
-          <SmallButton>맞습니다</SmallButton>
-          <SmallButton>아닙니다</SmallButton>
+          <SmallButton onClick={() => handlePlayVideo('sample1')}>기다려주세요</SmallButton>
+          <SmallButton onClick={() => handlePlayVideo('sample2')}>문 열어드릴게요</SmallButton>
+          <SmallButton onClick={() => handlePlayVideo('sample3')}>맞습니다</SmallButton>
+          <SmallButton onClick={() => handlePlayVideo('sample4')}>아닙니다</SmallButton>
         </ButtonGrid>
-        <WideButton>다시 한번 인식해주시겠어요?</WideButton>
-        <WideButton>지원되는 수어 리스트</WideButton>
+        <WideButton onClick={() => handlePlayVideo('sample5')}>다시 한번 인식해주시겠어요?</WideButton>
+        <WideButton onClick={() => handlePlayVideo('sample6')}>지원되는 수어 리스트</WideButton>
       </ButtonWrapper>
 
       <RoundButton onClick={goBackToManage}>✆</RoundButton>
