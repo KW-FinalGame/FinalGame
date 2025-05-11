@@ -71,6 +71,50 @@ const RoundButton = styled.button`
     background-color: #c02727;
   }
 `;
+const ButtonWrapper = styled.div`
+  width: 80%;
+  max-width: 500px;
+  margin-top: 20px;
+`;
+
+const ButtonGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+`;
+
+const SmallButton = styled.button`
+  padding: 15px 10px;
+  background-color: #4CAF50;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover {
+    background-color: #45a049;
+  }
+`;
+
+const WideButton = styled.button`
+  margin-top: 10px;
+  width: 100%;
+  padding: 15px;
+  background-color: #2196F3;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover {
+    background-color: #1976D2;
+  }
+`;
+
 
 function Mancam() {
   const navigate = useNavigate();
@@ -269,6 +313,16 @@ function Mancam() {
       <TextBox>
         여기에 사용자의 수화를 인식한 텍스트가 나와요.
       </TextBox>
+      <ButtonWrapper>
+        <ButtonGrid>
+          <SmallButton>기다려주세요</SmallButton>
+          <SmallButton>문 열어드릴게요</SmallButton>
+          <SmallButton>맞습니다</SmallButton>
+          <SmallButton>아닙니다</SmallButton>
+        </ButtonGrid>
+        <WideButton>다시 한번 인식해주시겠어요?</WideButton>
+        <WideButton>지원되는 수어 리스트</WideButton>
+      </ButtonWrapper>
 
       <RoundButton onClick={goBackToManage}>✆</RoundButton>
     </PageWrapper>
