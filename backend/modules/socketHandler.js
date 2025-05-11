@@ -37,6 +37,10 @@ const socketHandler = (server) => {
             console.log('연결 해제');
             socket.broadcast.emit('manager-status', { connected: false });
         });
+        
+        socket.on('trigger-play-db-video', (url) => {
+            io.emit('play-db-video', url); // URL을 클라이언트로 전달
+        });
     });
 };
 
