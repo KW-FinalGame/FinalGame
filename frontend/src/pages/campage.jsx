@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import Webcam from 'react-webcam'; 
 import io from 'socket.io-client';
 import { isAuthenticated } from '../utils/auth';
+import Modal from 'react-modal';
 
 // 소켓 연결만 초기화
 const socket = io('http://localhost:3002');
@@ -97,6 +98,9 @@ function Cam() {
   const peerRef = useRef(null);
   const streamRef = useRef(null);
   const [isManConnected, setManagerOnline] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoUrl, setVideoUrl] = useState('');
+
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -119,6 +123,13 @@ function Cam() {
       if (data.connected) {
         initializeWebRTC();
       }
+    });
+
+    
+    // 소켓으로 영상 URL 받기
+    socket.on('play-db-video', (url) => {
+      setVideoUrl(url); // URL 저장
+      setShowVideoModal(true);
     });
 
     // WebRTC 초기화 함수
@@ -241,6 +252,7 @@ function Cam() {
       socket.off('answer');
       socket.off('ice-candidate');
       socket.off('manager-status');
+      socket.off('play-db-video');
 
       // 스트림 트랙 중지
       if (streamRef.current) {
@@ -264,6 +276,11 @@ function Cam() {
   const goBackToMain = () => {
     navigate('/main');
   };
+  const handleVideoEnded = () => {
+    setShowVideoModal(false);
+    setVideoUrl('');
+  };
+  
 
   return (
     <PageWrapper>
@@ -285,6 +302,34 @@ function Cam() {
           style={{ width: '100%', height: '100%' }}
         />
       </WebcamBox>
+
+      
+      {showVideoModal && videoUrl && (
+        <Modal
+          isOpen={showVideoModal}
+          onRequestClose={() => setShowVideoModal(false)}
+          style={{
+            overlay: { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+            content: {
+              top: '50%', left: '50%', right: 'auto', bottom: 'auto',
+              marginRight: '-50%', transform: 'translate(-50%, -50%)',
+              background: '#000', border: 'none', padding: 0,
+            }
+          }}
+        >
+          <video
+            width="500"
+            autoPlay
+            controls={false}
+            onEnded={handleVideoEnded}
+          >
+            <source src={videoUrl} type="video/mp4" />
+            브라우저가 video 태그를 지원하지 않습니다.
+          </video>
+        </Modal>
+      )}
+
+
 
       <StatusIndicator>
         <Circle online={isManConnected} />
