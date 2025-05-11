@@ -85,7 +85,7 @@ const ButtonGrid = styled.div`
 
 const SmallButton = styled.button`
   padding: 15px 10px;
-  background-color: #4CAF50;
+  background-color: #D9D9D9;
   color: white;
   font-size: 16px;
   border: none;
@@ -94,7 +94,7 @@ const SmallButton = styled.button`
   text-align: center;
 
   &:hover {
-    background-color: #45a049;
+    background-color: #B3B3B3 ;
   }
 `;
 
@@ -102,7 +102,7 @@ const WideButton = styled.button`
   margin-top: 10px;
   width: 100%;
   padding: 15px;
-  background-color: #2196F3;
+  background-color: #D9D9D9;
   color: white;
   font-size: 16px;
   border: none;
@@ -111,7 +111,7 @@ const WideButton = styled.button`
   text-align: center;
 
   &:hover {
-    background-color: #1976D2;
+    background-color: #B3B3B3 ;
   }
 `;
 
