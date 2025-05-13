@@ -8,7 +8,6 @@ const cors = require('cors');
 const http = require('http'); // http 모듈 추가
 const server = http.createServer(app); // http 서버 생성
 const authRoutes = require('./routes/authRoutes'); // 라우터 파일 가져오기
-const signRoutes = require('./routes/signRoutes');
 const mapRoutes = require('./routes/mapRoutes');
 const socketHandler = require('./modules/socketHandler');
 
@@ -46,7 +45,6 @@ const authenticateToken = (req, res, next) => {
 
 // 라우터 설정
 app.use('/', authRoutes); // '/' 경로로 authRoutes를 설정
-app.use('/', signRoutes); // roomRoutes 추가
 app.use('/', mapRoutes);
 
 // 배포 시 활성화 할 부분
