@@ -22,7 +22,7 @@ const Header = styled.header`
 
 const LogoText = styled.h1`
   color: gray;
-  margin: 0;
+  margin-top: -35px;
   font-size: 50px;
   font-weight: bold;
   @media (max-width: 768px) {
@@ -34,7 +34,7 @@ const LogoText = styled.h1`
 `;
 
 const WebcamBox = styled.div`
-  margin-top: 40px;
+  margin-top: 20px;
   width: 80%;
   max-width: 500px;
   aspect-ratio: 4 / 3;
@@ -326,6 +326,7 @@ function Mancam() {
         </ButtonGrid>
         <WideButton onClick={() => handlePlayVideo('sample5')}>다시 한번 인식해주시겠어요?</WideButton>
         <WideButton onClick={() => handlePlayVideo('sample6')}>지원되는 수어 리스트</WideButton>
+        <WideButton onClick={() => handlePlayVideo('sample7')}>민원이 해결되었나요?</WideButton>
       </ButtonWrapper>
 
       <RoundButton onClick={goBackToManage}>✆</RoundButton>

@@ -81,20 +81,77 @@ const ManualTitle = styled.div`
 `;
 
 const ManualText = styled.div`
-  font-size: 25px;
-  font-weight: bold;
+  font-size: 18px; /* 전체적으로 줄임 (기존 25px → 18px) */
+  font-weight: normal;
   color: #333;
-  margin-top:70px;
-  margin-left:55px;
-  @media (max-width: 768px) {
-    font-size: 25px;
-  }
-  @media (max-width: 480px) {
-    font-size: 20px;
-    margin-left:10px;
+  margin-top: 40px;
+  margin-left: 30px;
 
+  h3 {
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 20px;
+  }
+
+  ul {
+    padding-left: 20px;
+    margin-bottom: 20px;
+  }
+
+  li {
+    font-size: 17px;
+    margin-bottom: 10px;
+  }
+
+  blockquote {
+    font-size: 16px;
+    font-style: italic;
+    background-color: #BEBEBE;
+    padding: 15px;
+    border-left: 5px solid #ccc;
+    margin-top: 20px;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 16px;
+
+    h3 {
+      font-size: 18px;
+    }
+
+    li {
+      font-size: 15px;
+    }
+
+    blockquote {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    font-size: 15px;
+    margin-left: 10px;
+
+    h3 {
+      font-size: 16px;
+    }
+
+    li {
+      font-size: 14px;
+    }
+
+    blockquote {
+      font-size: 13px;
+    }
   }
 `;
+
+
 function Manage() {
   return (
     <PageWrapper>
@@ -108,47 +165,20 @@ function Manage() {
         <ManualTitle>역무원 수어 민원 대응 매뉴얼</ManualTitle>
       </TopWrapper>
       <ManualText>
-        <h3>1. <strong>수어 요청이 들어오면 어떻게 해야 하나요?👀</strong></h3>
+        <h3> <strong>1.수어 요청이 들어오면 어떻게 해야 하나요?👀</strong></h3>
         <ul>
-          <li>고객이 수어 통역 웹서비스를 통해 요청을 보냅니다.</li>
-          <li>[알림창]이 역무원 화면에 표시됩니다.</li>
-        </ul>
-        <p>👉 “고객이 수어 민원을 요청했습니다. 실시간 영상이 시작됩니다.”</p>
-
-        <p>▶ 즉시 해야 할 일</p>
-        <ol>
           <li><strong>웹캠을 정면에 두고 고객 화면 주시</strong></li>
           <li>고객이 손동작을 시작하면, 자동으로 <strong>텍스트 해석 결과</strong>가 화면에 출력됨</li>
           <li>민원 내용을 파악하고, <strong>즉각적/적절한 대응</strong> 준비</li>
-        </ol>
+        </ul>
 
-        <h3>2. 💬 <strong>무슨 말을 해야 하지? (민원 상황별 대응법)</strong></h3>
-        <table>
-          <thead>
-            <tr>
-              <th>고객 수어 내용 (예시)</th>
-              <th>AI 해석 결과</th>
-              <th>역무원 응답 방법</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>핸드폰을 잃어버렸어요</td>
-              <td>분실물 신고</td>
-              <td>“분실물 센터로 안내드릴게요. ○○번 출구 쪽에 있습니다.”</td>
-            </tr>
-            <tr>
-              <td>화장실이 어디예요?</td>
-              <td>위치 문의</td>
-              <td>“화장실은 이 개찰구 오른쪽에 있어요.”</td>
-            </tr>
-            <tr>
-              <td>도움을 주세요</td>
-              <td>일반 요청</td>
-              <td>“무엇을 도와드릴까요? 다시 한 번 수어 부탁드려도 될까요?”</td>
-            </tr>
-          </tbody>
-        </table>
+        <h3> <strong>2.민원 상황별 대응법 💬</strong></h3>
+        <ul>
+          <li>개찰구의 문이 안열릴경우 - 문열림 버튼 누르기</li>
+          <li>고객이 질문한 경우 - 질문에 따른 답변(예,아니오) 버튼 누르기</li>
+          <li>버튼으로 대응불가한 경우 - 기다려주세요 버튼 누른 후 고객의 위치로 가서 도와드리기</li>
+          <li>수화인식이 실패한 경우 - 다시 인식해주시겠어요 버튼 누른 후 대응하기 또는 인식가능한 수화 리스트 보여드리기</li>
+        </ul>
 
         <blockquote>
           <strong>[수어 인식 실패 상황]</strong><br />
@@ -163,10 +193,9 @@ function Manage() {
 
         <h3>3. ✅ <strong>대응 시 태도 지침</strong></h3>
         <ul>
-          <li>고객의 눈높이에 맞춰 시선 맞추기</li>
-          <li>말 대신 <strong>화면의 응답 버튼</strong>을 눌러 텍스트 전송 또는 음성 송출 선택</li>
-          <li>당황하거나 웃지 말고, <strong>차분하게</strong> 화면에 집중</li>
-          <li>마지막엔 꼭 <strong>“민원 해결이 되었나요?”</strong> 라는 안내 멘트 전송</li>
+          <li>말 대신 <strong>화면의 응답 버튼</strong>을 눌러 텍스트 전송</li>
+          <li><strong>차분하게</strong> 화면에 집중</li>
+          <li>마지막엔 꼭 <strong>“민원 해결이 되었나요?”</strong> 라는 버튼 전송</li>
         </ul>
       </ManualText>
 
