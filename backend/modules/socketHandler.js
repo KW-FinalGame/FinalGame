@@ -1,4 +1,5 @@
 const { Server } = require("socket.io");
+const SignGif = require('../models/signgif');     // gif DB
 
 const socketHandler = (server) => {
     const io = new Server(server, {
@@ -41,6 +42,28 @@ const socketHandler = (server) => {
         socket.on('trigger-play-db-video', (url) => {
             io.emit('play-db-video', url); // URL을 클라이언트로 전달
         });
+
+        socket.on('join-as-customer', () => {
+            socket.role = 'customer';
+          });
+        
+          socket.on('trigger-gif', async (keyword) => {
+            try {
+              const gif = await SignGif.findOne({ keyword });
+              if (gif) {
+                // 현재 연결된 모든 고객에게만 전달
+                for (const [id, s] of io.sockets.sockets) {
+                  if (s.role === 'customer') {
+                    s.emit('play-gif-url', gif.fileUrl);
+                  }
+                }
+              } else {
+                socket.emit('error', `해당 키워드(${keyword})에 대한 GIF가 없습니다.`);
+              }
+            } catch (e) {
+              socket.emit('error', 'GIF 처리 중 오류 발생');
+            }
+          });
     });
 };
 

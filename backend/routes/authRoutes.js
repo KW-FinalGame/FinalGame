@@ -82,6 +82,27 @@ router.post('/login', async (req, res) => {
     }
   });
   
+  router.post('/upload-disability-image', upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).send('파일이 없습니다.');
+  
+      const filePath = `/uploads/${req.file.filename}`;
+  
+      // 👉 사용자 식별 (예: 로그인 상태의 userId가 헤더/쿠키/토큰 등으로 전달됨)
+      const userId = req.body.userId;
+      const user = await User.findOne({ id: userId });
+      if (user) {
+        user.disability_cert_image_path = filePath;
+        await user.save();
+      }
+  
+      return res.status(200).json({ message: '업로드 성공', filePath });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ message: '업로드 실패' });
+    }
+  });
+  
 
 // // 중복 ID 체크 API
 // router.get('/check-duplicate/:id', async (req, res) => {
