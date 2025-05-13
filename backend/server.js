@@ -46,6 +46,7 @@ const authenticateToken = (req, res, next) => {
 // 라우터 설정
 app.use('/', authRoutes); // '/' 경로로 authRoutes를 설정
 app.use('/', mapRoutes);
+app.use('/uploads', express.static('uploads')); // 업로드 정적 파일 추가
 
 // 배포 시 활성화 할 부분
 // // React 정적 파일 제공
