@@ -1,9 +1,10 @@
 // frontend/src/pages/Home.jsx
-import React, { useState } from 'react';
+import React, { useState,useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import styled from 'styled-components';
 import { Button } from 'react-bootstrap';
 import axios from 'axios';
+import Webcam from 'react-webcam';
 import subway from "../assets/imgs/subwayman2.png"; 
 import logoImage from "../assets/imgs/logoImage.png";
 
@@ -175,6 +176,12 @@ const CheckboxInput = styled.input`
 // ===== Component =====
 function Home() {
   const navigate = useNavigate();
+
+  //청각장애인인증
+  const webcamRef = useRef(null);
+  const [showWebcam, setShowWebcam] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   
   const [showModal, setShowModal] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -274,7 +281,7 @@ function Home() {
               <Input type="password" placeholder="비밀번호 (필수)" value={password} onChange={(e) => setPassword(e.target.value)} />
               <Input type="password" placeholder="비밀번호 확인 (필수)" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
               <CheckboxWrapper>
-                <CheckboxInput type="checkbox" checked={isCertified} onChange={(e) => setIsCertified(e.target.checked)} />
+                <CheckboxInput type="checkbox" checked={isCertified} onChange={() => setShowWebcam(true)} />
                 청각장애인 인증 (필수)
               </CheckboxWrapper>
               <Input type="text" placeholder="기타 (기저질환 등, 선택)" value={etc} onChange={(e) => setEtc(e.target.value)} />
@@ -284,6 +291,76 @@ function Home() {
           )}
         </ModalContent>
       </ModalOverlay>
+      {showWebcam && (
+  <ModalOverlay show={true} onClick={() => setShowWebcam(false)}>
+    <ModalContent onClick={(e) => e.stopPropagation()} style={{ position: 'relative'}}>
+      <h3 style={{ fontSize: '16px', marginBottom: '12px'}}>장애인증을 네모 박스에 맞춰 촬영해주세요</h3>
+
+      <div style={{ position: 'relative', width: '100%', paddingTop: '75%' }}>
+        <Webcam
+          audio={false}
+          ref={webcamRef}
+          screenshotFormat="image/jpeg"
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, width: '100%', height: '100%',
+            objectFit: 'cover',
+            borderRadius: '10px',
+          }}
+        />
+        {/* 네모 박스 */}
+        <div style={{
+          position: 'absolute',
+          top: '30%', left: '25%',
+          width: '50%', height: '40%',
+          border: '3px solid red',
+          boxSizing: 'border-box',
+          zIndex: 2,
+        }} />
+      </div>
+        <div style={{ marginTop: '20px' }}>
+      <ConfirmButton onClick={async () => {
+        if (!webcamRef.current) return;
+        const imageSrc = webcamRef.current.getScreenshot();
+
+        // canvas로 박스 영역 자르기
+        const img = new Image();
+        img.src = imageSrc;
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          const scaleWidth = 640; // 예상 webcam 너비
+          const scaleHeight = 480; // 예상 webcam 높이
+          canvas.width = 320; // 박스 너비 (예: 50%)
+          canvas.height = 192; // 박스 높이 (예: 40%)
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, scaleWidth * 0.25, scaleHeight * 0.3, scaleWidth * 0.5, scaleHeight * 0.4, 0, 0, canvas.width, canvas.height);
+
+          canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('image', blob, 'certification.jpg');
+
+            try {
+              setUploading(true);
+              await axios.post('http://localhost:3002/upload-disability-image', formData);
+              alert('인증서가 업로드되었습니다.');
+              setIsCertified(true);
+              setShowWebcam(false);
+            } catch (err) {
+              alert('업로드 실패');
+              console.error(err);
+            } finally {
+              setUploading(false);
+            }
+          }, 'image/jpeg');
+        };
+      }}>
+        {uploading ? '업로드 중...' : '촬영 및 제출'}
+      </ConfirmButton>
+      </div>
+    </ModalContent>
+  </ModalOverlay>
+)}
+
     </PageWrapper>
   );
 }
