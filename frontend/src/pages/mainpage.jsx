@@ -254,7 +254,7 @@ function Main() {
   }, [navigate]);
 
   useEffect(() => {
-    const storedName = sessionStorage.getItem('username');
+    const storedName = sessionStorage.getItem('userId');
     if (storedName) {
       setUsername(storedName);
     }

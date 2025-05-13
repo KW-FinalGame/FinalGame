@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Button } from 'react-bootstrap';
 import axios from 'axios';
-import subway from "../assets/imgs/subway.png"; 
+import subway from "../assets/imgs/subwayman2.png"; 
 import logoImage from "../assets/imgs/logoImage.png";
 
 
@@ -45,15 +45,22 @@ const ImageWrapper = styled.div`
 `;
 
 const StyledImage = styled.img`
-  width: 600px;
+  width: 550px;
   height: auto;
   border-radius: 10px;
+  margin-left:130px;
+  margin-bottom:-30px;
 
   @media (max-width: 768px) {
     width: 80%;
+    margin-left:130px;
+    margin-bottom:-30px;
   }
   @media (max-width: 480px) {
     width: 100%;
+    margin-top:50px;
+    margin-left:0px;
+    margin-bottom:-30px;
   }
 `;
 
@@ -64,7 +71,7 @@ const ButtonWrapper = styled.div`
 `;
 
 const CustomButton = styled(Button)`
-  background-color: gray !important;
+  background-color: #545454 !important;
   margin-top: -20px;
   border: none !important;
   padding: 15px 50px;
@@ -81,8 +88,8 @@ const CustomButton = styled(Button)`
     font-size: 25px;
   }
   @media (max-width: 480px) {
-    padding: 12px 30px;
-    font-size: 20px;
+    padding: 14px 40px;
+    font-size: 30px;
   }
 `;
 
@@ -128,7 +135,7 @@ const Input = styled.input`
 `;
 
 const ConfirmButton = styled.button`
-  background-color: gray;
+  background-color: #545454;
   color: white;
   font-size: 16px;
   font-weight: bold;
