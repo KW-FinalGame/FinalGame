@@ -85,7 +85,7 @@ const ButtonGrid = styled.div`
 
 const SmallButton = styled.button`
   padding: 15px 10px;
-  background-color: #D9D9D9;
+  background-color: #BEBEBE;
   color: white;
   font-size: 16px;
   border: none;
@@ -102,7 +102,7 @@ const WideButton = styled.button`
   margin-top: 10px;
   width: 100%;
   padding: 15px;
-  background-color: #D9D9D9;
+  background-color: #BEBEBE;
   color: white;
   font-size: 16px;
   border: none;
