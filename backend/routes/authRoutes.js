@@ -4,9 +4,22 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 require('dotenv').config();
-
 router.use(cookieParser());
+
+// 업로드 설정
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `cert-${Date.now()}${ext}`);
+  }
+});
+const upload = multer({ storage });
 
 
 // 사용자 저장 함수 정의 
