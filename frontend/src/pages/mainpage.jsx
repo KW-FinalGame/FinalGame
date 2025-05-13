@@ -343,7 +343,7 @@ function Main() {
       {selectedStation && (
         <ModalBackdrop>
           <Modal>
-            <ModalTitle>{selectedStation} 역의 역무원...✆</ModalTitle>
+            <ModalTitle>{selectedStation} 역의 역무원...☎</ModalTitle>
             <OpenButton onClick={OpenCam}>✆</OpenButton>
             <CloseButton onClick={closeModal}>✆</CloseButton>
           </Modal>
