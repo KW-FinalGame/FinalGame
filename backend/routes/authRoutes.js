@@ -16,9 +16,10 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const userId = req.user.id;
+    const userId = req.body.userId || 'unknown';
     cb(null, `cert-${userId}-${Date.now()}${ext}`);
-  }  
+  }
+   
 });
 const upload = multer({ storage });
 
@@ -42,7 +43,7 @@ router.post('/register', async (req, res) => {
       const { username, id, password, birthday
         , phone_num, is_disabled, special_notes } = req.body;
       
-        const existingUser = await getUserFromDB(id); // 아이디 중복 확인인
+        const existingUser = await getUserFromDB(id); // 아이디 중복 확인
   
       if (existingUser) {
         return res.status(400).json({ message: '이미 존재하는 ID입니다.' });
