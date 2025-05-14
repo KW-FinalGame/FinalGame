@@ -9,6 +9,7 @@ const http = require('http'); // http 모듈 추가
 const server = http.createServer(app); // http 서버 생성
 const authRoutes = require('./routes/authRoutes'); // 라우터 파일 가져오기
 const mapRoutes = require('./routes/mapRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const socketHandler = require('./modules/socketHandler');
 
 
@@ -46,6 +47,7 @@ const authenticateToken = (req, res, next) => {
 // 라우터 설정
 app.use('/', authRoutes); // '/' 경로로 authRoutes를 설정
 app.use('/', mapRoutes);
+app.use('/', adminRoutes);
 app.use('/uploads', express.static('uploads')); // 업로드 정적 파일 추가
 
 // 배포 시 활성화 할 부분
