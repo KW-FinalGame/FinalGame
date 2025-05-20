@@ -208,7 +208,7 @@ function Home() {
       let role = 'user';
   
       // 관리자 계정 확인
-      if (loginId === 'admin' && loginPw === 'admin1234') {
+      if (loginId === 'admin12345' && loginPw === 'admin12345') {
         role = 'admin';
       }
   
