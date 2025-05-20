@@ -205,22 +205,34 @@ function Home() {
 
   const handleLogin = async () => {
     try {
+      let role = 'user';
+  
+      // 관리자 계정 확인
+      if (loginId === 'admin' && loginPw === 'admin1234') {
+        role = 'admin';
+      }
+  
       const response = await axios.post('http://localhost:3002/login', {
         id: loginId,
         password: loginPw,
-        role: loginRole,
+        role,
       });
-
+  
       sessionStorage.setItem('accessToken', response.data.token);
       sessionStorage.setItem('userId', response.data.user.id);
-
+      sessionStorage.setItem('userRole', response.data.user.role);
+  
+      // localStorage에도 역할 저장
+      localStorage.setItem('user', JSON.stringify({ username: loginId, role }));
+  
       setShowModal(false);
-      navigate(response.data.user.role === 'admin' ? '/manage' : '/main');
+      navigate(role === 'admin' ? '/manage' : '/main');
     } catch (error) {
       console.error('로그인 실패:', error);
       alert('로그인에 실패했습니다.');
     }
   };
+  
 
   const handleSignup = async () => {
     try {
