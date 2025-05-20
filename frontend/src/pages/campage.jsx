@@ -127,6 +127,13 @@ function Cam() {
     socket.on('play-gif-url', (url) => {
       setVideoUrl(url);
       setShowVideoModal(true);
+
+      
+    // ✅ 5초 후 자동으로 모달 닫기
+    setTimeout(() => {
+      setShowVideoModal(false);
+      setVideoUrl('');
+    }, 5000);
     });
 
     const initializeWebRTC = async () => {
