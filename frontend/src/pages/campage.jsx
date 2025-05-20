@@ -242,6 +242,7 @@ function Cam() {
         <Webcam
           ref={webcamRef}
           audio={true}
+          mute
           mirrored={true}
           screenshotFormat="image/jpeg"
           videoConstraints={{ facingMode: 'user' }}
