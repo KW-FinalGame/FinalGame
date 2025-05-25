@@ -1,7 +1,10 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import man from "../assets/imgs/man.png";
 import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:3002'); // 서버 주소에 맞게 변경
 
 const PageWrapper = styled.div`
   display: flex;
@@ -169,10 +172,47 @@ const ConnectButton = styled.button`
     background-color: #333;
   }
 `;
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: ${({ visible }) => (visible ? 'flex' : 'none')};
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 30px 50px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+`;
+
 
 function Manage() {
   const navigate = useNavigate();
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
+  useEffect(() => {
+    socket.on('join-as-customer', () => {
+      setIsModalVisible(true);
+      setTimeout(() => {
+        setIsModalVisible(false);
+      }, 3000); // 3초 후 자동 닫힘
+    });
+  
+    return () => {
+      socket.off('join-as-customer'); // 이벤트 정리 시 이름 일치
+    };
+  }, []);
+    
   return (
     <PageWrapper>
       <Header>
@@ -184,6 +224,11 @@ function Manage() {
           <ManImage src={man} alt="역무원 이미지" />
           <ManualTitle>역무원 수어 민원 대응 매뉴얼</ManualTitle>
         </TopWrapper>
+        <ModalOverlay visible={isModalVisible}>
+          <ModalContent>고객이 접속했습니다</ModalContent>
+        </ModalOverlay>
+
+
 
         <ManualText>
           {/* 매뉴얼 내용 그대로 유지 */}

@@ -9,17 +9,22 @@ const socketHandler = (server) => {
             credentials: true
         }
     });
+    let managerConnected = false;
 
     io.on('connection', (socket) => {
         console.log("클라이언트 연결됨:", socket.id);
 
         socket.on('join-as-manager', () => {
             console.log('역무원 접속');
+            managerConnected = true;
             socket.broadcast.emit('manager-status', { connected: true });
         });
 
         socket.on('join-as-customer', () => {
             console.log('고객 접속');
+            
+            socket.role = 'customer'; // 고객 표시
+            socket.emit('manager-status', { connected: managerConnected });
         });
 
         socket.on('offer', (offer) => {
@@ -36,16 +41,15 @@ const socketHandler = (server) => {
 
         socket.on('disconnect', () => {
             console.log('연결 해제');
-            socket.broadcast.emit('manager-status', { connected: false });
+            if (managerConnected) {
+              managerConnected = false;
+              io.emit('manager-status', { connected: false });
+            }
         });
         
         socket.on('trigger-play-db-video', (url) => {
             io.emit('play-db-video', url); // URL을 클라이언트로 전달
         });
-
-        socket.on('join-as-customer', () => {
-            socket.role = 'customer';
-          });
         
           socket.on('trigger-gif', async (keyword) => {
             try {
