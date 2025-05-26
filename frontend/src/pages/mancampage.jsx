@@ -118,12 +118,14 @@ function Mancam() {
   const [isConnected, setIsConnected] = useState(false);
   const peerRef = useRef(null);
   const remoteStreamRef = useRef(null);
-  const [videoMounted, setVideoMounted] = useState(false);
-  const [gifUrl, setGifUrl] = useState(null); // ✅ 수어 GIF URL 상태
+  const [gifUrl, setGifUrl] = useState(null);
   const [debug, setDebug] = useState('초기화 중...');
 
+  const roomId = 'default-room';
+
   useEffect(() => {
-    socket.emit('join-as-manager');
+    socket.emit('join-room', { role: 'manager', roomId });
+
     const peer = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
@@ -133,9 +135,15 @@ function Mancam() {
       if (event.streams && event.streams[0]) {
         remoteStreamRef.current = event.streams[0];
         if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStreamRef.current;
-          setIsConnected(true);
+          remoteVideoRef.current.srcObject = event.streams[0];
         }
+        setIsConnected(true);
+      }
+    };
+
+    peer.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', { candidate: event.candidate, roomId });
       }
     };
 
@@ -143,65 +151,51 @@ function Mancam() {
       setDebug(`연결 상태: ${peer.connectionState}`);
     };
 
-    peer.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit('ice-candidate', event.candidate);
-      }
-    };
-
     socket.on('offer', async (offer) => {
       try {
-        if (!peerRef.current || peerRef.current.signalingState !== 'stable') return;
         await peer.setRemoteDescription(new RTCSessionDescription(offer));
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
-        socket.emit('answer', answer);
+        socket.emit('answer', { answer, roomId });
       } catch (error) {
         setDebug(`오류 발생: ${error.message}`);
       }
     });
 
-    socket.on('ice-candidate', async (candidate) => {
+    socket.on('ice-candidate', async ({ candidate }) => {
       try {
-        if (peer.signalingState !== 'closed') {
-          await peer.addIceCandidate(new RTCIceCandidate(candidate));
-        }
+        await peer.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (error) {
         console.error('ICE 후보 처리 오류:', error);
       }
     });
 
-    return () => {
-      socket.off('offer');
-      socket.off('ice-candidate');
-      if (remoteVideoRef.current?.srcObject) {
-        remoteVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
-        remoteVideoRef.current.srcObject = null;
+    // 퇴장 알림 처리 (서버에서 'room-members' 이벤트로 인원변경 확인)
+    socket.on('room-members', (members) => {
+      if (!members.includes(socket.id)) {
+        setIsConnected(false);
+        setDebug('상대방이 퇴장했습니다.');
+        if (remoteVideoRef.current?.srcObject) {
+          remoteVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
+          remoteVideoRef.current.srcObject = null;
+        }
       }
-      if (peerRef.current) {
-        peerRef.current.close();
-        peerRef.current = null;
-      }
-    };
-  }, []);
+    });
 
-  useEffect(() => {
-    if (videoMounted && remoteStreamRef.current) {
-      setIsConnected(true);
-    }
-  }, [videoMounted, remoteStreamRef.current]);
+    socket.on('manager-status', ({ connected }) => {
+      // 필요시 매니저 연결 상태 처리 (옵션)
+      // console.log('매니저 연결 상태:', connected);
+    });
 
-  useEffect(() => {
     socket.on('play-video-url', (url) => {
-      const videoEl = remoteVideoRef.current;
-      if (videoEl) {
-        videoEl.src = url;
-        videoEl.play();
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.src = url;
+        remoteVideoRef.current.play().catch(err => console.error('비디오 재생 실패:', err));
       }
     });
 
     socket.on('play-gif-url', (url) => {
-      setGifUrl(url); // ✅ GIF URL 수신
+      setGifUrl(url);
     });
 
     socket.on('error', (msg) => {
@@ -209,23 +203,33 @@ function Mancam() {
     });
 
     return () => {
+      socket.off('offer');
+      socket.off('ice-candidate');
+      socket.off('room-members');
+      socket.off('manager-status');
       socket.off('play-video-url');
       socket.off('play-gif-url');
       socket.off('error');
+
+      if (remoteVideoRef.current?.srcObject) {
+        remoteVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
+        remoteVideoRef.current.srcObject = null;
+      }
+
+      if (peerRef.current) {
+        peerRef.current.close();
+        peerRef.current = null;
+      }
     };
-  }, []);
+  }, [roomId]);
 
   const goBackToManage = () => {
     navigate('/manage');
   };
 
-  const handlePlayVideo = (videoId) => {
-    const url = `http://localhost:3002/videos/${videoId}.mp4`;
-    socket.emit('trigger-play-db-video', url);
-  };
 
   const handlePlayGif = (keyword) => {
-    socket.emit('trigger-gif', keyword); // ✅ GIF 요청
+    socket.emit('trigger-gif', keyword);
   };
 
   return (
@@ -236,18 +240,7 @@ function Mancam() {
 
       <WebcamBox>
         <video
-          ref={(el) => {
-            remoteVideoRef.current = el;
-            if (el) {
-              setVideoMounted(true);
-              if (remoteStreamRef.current) {
-                el.srcObject = remoteStreamRef.current;
-                el.onloadedmetadata = () => {
-                  el.play().catch(e => console.error("비디오 재생 실패:", e));
-                };
-              }
-            }
-          }}
+          ref={remoteVideoRef}
           autoPlay
           playsInline
           muted
