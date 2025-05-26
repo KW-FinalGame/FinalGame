@@ -1,74 +1,88 @@
 const { Server } = require("socket.io");
-const SignGif = require('../models/signgif');     // gif DB
+const SignGif = require('../models/signgif'); // gif DB
 
 const socketHandler = (server) => {
-    const io = new Server(server, {
-        cors: {
-            origin: 'http://localhost:3000', // 프론트엔드 주소
-            methods: ['GET', 'POST'],
-            credentials: true
-        }
-    });
-    let managerConnected = false;
+  const io = new Server(server, {
+    cors: {
+      origin: 'http://localhost:3000',
+      methods: ['GET', 'POST'],
+      credentials: true
+    }
+  });
 
-    io.on('connection', (socket) => {
-        console.log("클라이언트 연결됨:", socket.id);
+  io.on('connection', (socket) => {
+    console.log("클라이언트 연결됨:", socket.id);
 
-        socket.on('join-as-manager', () => {
-            console.log('역무원 접속');
-            managerConnected = true;
-            socket.broadcast.emit('manager-status', { connected: true });
-        });
+    socket.on('join-room', async ({ role, roomId }) => {
+      const clients = io.sockets.adapter.rooms.get(roomId);
+      const numClients = clients ? clients.size : 0;
 
-        socket.on('join-as-customer', () => {
-            console.log('고객 접속');
-            
-            socket.role = 'customer'; // 고객 표시
-            socket.emit('manager-status', { connected: managerConnected });
-        });
+      `if (numClients >= 3) {
+        console.log('방이 가득 찼습니다.');
+        socket.emit('room-full');
+        return;
+      }`
 
-        socket.on('offer', (offer) => {
-            socket.broadcast.emit('offer', offer);
-        });
+      socket.join(roomId);
+      socket.role = role;
+      socket.roomId = roomId;
 
-        socket.on('answer', (answer) => {
-            socket.broadcast.emit('answer', answer);
-        });
+      console.log(`${role} 입장: ${socket.id} (room: ${roomId})`);
 
-        socket.on('ice-candidate', (candidate) => {
-            socket.broadcast.emit('ice-candidate', candidate);
-        });
+      const members = Array.from(io.sockets.adapter.rooms.get(roomId));
+      const isManagerConnected = members.some(id => io.sockets.sockets.get(id)?.role === 'manager');
 
-        socket.on('disconnect', () => {
-            console.log('연결 해제');
-            if (managerConnected) {
-              managerConnected = false;
-              io.emit('manager-status', { connected: false });
-            }
-        });
-        
-        socket.on('trigger-play-db-video', (url) => {
-            io.emit('play-db-video', url); // URL을 클라이언트로 전달
-        });
-        
-          socket.on('trigger-gif', async (keyword) => {
-            try {
-              const gif = await SignGif.findOne({ keyword });
-              if (gif) {
-                // 현재 연결된 모든 고객에게만 전달
-                for (const [id, s] of io.sockets.sockets) {
-                  if (s.role === 'customer') {
-                    s.emit('play-gif-url', gif.fileUrl);
-                  }
-                }
-              } else {
-                socket.emit('error', `해당 키워드(${keyword})에 대한 GIF가 없습니다.`);
+      io.to(roomId).emit('room-members', members);
+      io.to(roomId).emit('manager-status', { connected: isManagerConnected });
+
+      // WebRTC 이벤트 핸들링
+      socket.on('offer', (offer) => {
+        socket.to(roomId).emit('offer', offer);
+      });
+
+      socket.on('answer', (answer) => {
+        socket.to(roomId).emit('answer', answer);
+      });
+
+      socket.on('ice-candidate', (candidate) => {
+        socket.to(roomId).emit('ice-candidate', candidate);
+      });
+
+      socket.on('trigger-play-db-video', (url) => {
+        io.to(roomId).emit('play-video-url', url); // 이벤트명 통일
+      });
+
+      socket.on('trigger-gif', async (keyword) => {
+        try {
+          const gif = await SignGif.findOne({ keyword });
+          if (gif) {
+            for (const id of io.sockets.adapter.rooms.get(roomId) || []) {
+              const s = io.sockets.sockets.get(id);
+              if (s?.role === 'customer') {
+                s.emit('play-gif-url', gif.fileUrl);
               }
-            } catch (e) {
-              socket.emit('error', 'GIF 처리 중 오류 발생');
             }
-          });
+          } else {
+            socket.emit('error', `해당 키워드(${keyword})에 대한 GIF가 없습니다.`);
+          }
+        } catch (e) {
+          socket.emit('error', 'GIF 처리 중 오류 발생');
+        }
+      });
+
+      socket.on('disconnect', () => {
+        console.log(`${role} 퇴장: ${socket.id} (room: ${roomId})`);
+
+        const room = io.sockets.adapter.rooms.get(roomId);
+        const stillManager = room
+          ? Array.from(room).some(id => io.sockets.sockets.get(id)?.role === 'manager')
+          : false;
+
+        io.to(roomId).emit('manager-status', { connected: stillManager });
+        io.to(roomId).emit('room-members', Array.from(room || []));
+      });
     });
+  });
 };
 
 module.exports = socketHandler;

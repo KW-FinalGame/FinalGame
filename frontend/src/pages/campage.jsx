@@ -92,12 +92,14 @@ function Cam() {
   const navigate = useNavigate();
   const location = useLocation();
   const stationName = location.state?.stationName || "알 수 없음";
-  const webcamRef = useRef(null);
+  const roomId = location.state?.roomId || 'default-room';
+
+  const webcamRef = useRef(null); // react-webcam ref
   const peerRef = useRef(null);
-  const streamRef = useRef(null);
   const [isManConnected, setManagerOnline] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoUrl, setVideoUrl] = useState('');
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -105,15 +107,13 @@ function Cam() {
       navigate('/');
       return;
     }
-    console.log("Cam 컴포넌트 마운트");
-    
-    socket.emit('join-as-customer');
-    console.log("고객으로 접속 알림 전송");
-    
-    socket.on('manager-status', (data) => {
-      console.log("역무원 상태 업데이트:", data);
-      setManagerOnline(data.connected);
-      if (data.connected) {
+
+    socket.emit('join-room', { roomId, role: 'customer' });
+
+    socket.on('room-info', ({ users }) => {
+      const managerExists = users.some(user => user.role === 'manager');
+      setManagerOnline(managerExists);
+      if (managerExists && !connected) {
         initializeWebRTC();
       }
     });
@@ -123,101 +123,103 @@ function Cam() {
       setShowVideoModal(true);
     });
 
-    // ✅ 추가: GIF 재생 소켓 수신
     socket.on('play-gif-url', (url) => {
+      // GIF 재생 시 로컬 스트림 잠시 중지
+      stopLocalStream();
       setVideoUrl(url);
       setShowVideoModal(true);
-
-      
-    // ✅ 5초 후 자동으로 모달 닫기
-    setTimeout(() => {
-      setShowVideoModal(false);
-      setVideoUrl('');
-    }, 5000);
+      setTimeout(() => {
+        setShowVideoModal(false);
+        setVideoUrl('');
+        restoreLocalStream();
+      }, 5000);
     });
 
-    const initializeWebRTC = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        streamRef.current = stream;
-        if (webcamRef.current && webcamRef.current.video) {
-          webcamRef.current.video.srcObject = stream;
-        }
-
-        const peer = new RTCPeerConnection({
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
-        peerRef.current = peer;
-
-        stream.getTracks().forEach(track => {
-          peer.addTrack(track, stream);
-        });
-
-        peer.onconnectionstatechange = () => {
-          console.log("연결 상태 변경:", peer.connectionState);
-        };
-        
-        peer.oniceconnectionstatechange = () => {
-          console.log("ICE 연결 상태 변경:", peer.iceConnectionState);
-        };
-
-        peer.onicecandidate = (event) => {
-          if (event.candidate) {
-            socket.emit('ice-candidate', event.candidate);
-          }
-        };
-
-        peer.onsignalingstatechange = () => {
-          console.log("시그널링 상태 변경:", peer.signalingState);
-        };
-
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-        socket.emit('offer', offer);
-      } catch (error) {
-        console.error('웹캠 접근 오류:', error);
-      }
-    };
-
-    socket.on('answer', async (answer) => {
-      try {
-        if (peerRef.current && peerRef.current.signalingState !== 'closed') {
-          await peerRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-        }
-      } catch (error) {
-        console.error('응답 처리 오류:', error);
+    socket.on('play-video-url', (url) => {
+      stopLocalStream();
+      if (webcamRef.current && webcamRef.current.video) {
+        webcamRef.current.video.src = url;
+        webcamRef.current.video.play().catch(console.error);
       }
     });
 
-    socket.on('ice-candidate', async (candidate) => {
+    socket.on('answer', async ({ answer }) => {
       try {
-        if (peerRef.current && peerRef.current.signalingState !== 'closed') {
-          await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-        }
-      } catch (error) {
-        console.error('ICE 후보 처리 오류:', error);
+        await peerRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
+        setConnected(true);
+      } catch (e) {
+        console.error("answer 처리 오류", e);
       }
     });
 
-    initializeWebRTC();
+    socket.on('ice-candidate', async ({ candidate }) => {
+      try {
+        await peerRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.error("ICE 후보 처리 오류", err);
+      }
+    });
 
     return () => {
+      socket.off('room-info');
+      socket.off('play-db-video');
+      socket.off('play-gif-url');
+      socket.off('play-video-url');
       socket.off('answer');
       socket.off('ice-candidate');
-      socket.off('manager-status');
-      socket.off('play-db-video');
-      socket.off('play-gif-url'); // ✅ 정리
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-
-      if (peerRef.current) {
-        peerRef.current.close();
-        peerRef.current = null;
-      }
+      stopLocalStream();
+      peerRef.current?.close();
+      peerRef.current = null;
     };
-  }, [navigate]);
+  }, [roomId]);
+
+  const initializeWebRTC = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      if (webcamRef.current && webcamRef.current.video) {
+        webcamRef.current.video.srcObject = stream;
+      }
+
+      const peer = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      peerRef.current = peer;
+
+      stream.getTracks().forEach(track => peer.addTrack(track, stream));
+
+      peer.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice-candidate', { candidate: event.candidate, roomId });
+        }
+      };
+
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      socket.emit('offer', { offer, roomId });
+
+    } catch (err) {
+      console.error("웹캠 초기화 실패:", err);
+    }
+  };
+
+  const stopLocalStream = () => {
+    if (webcamRef.current?.video?.srcObject) {
+      webcamRef.current.video.srcObject.getTracks().forEach(track => track.stop());
+      webcamRef.current.video.srcObject = null;
+    }
+  };
+
+  const restoreLocalStream = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      if (webcamRef.current && webcamRef.current.video) {
+        webcamRef.current.video.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("로컬 스트림 복구 실패", err);
+    }
+  };
+
 
   const goBackToMain = () => {
     navigate('/main');
@@ -241,8 +243,9 @@ function Cam() {
       <WebcamBox>
         <Webcam
           ref={webcamRef}
-          audio={true}
-          mute
+          autoPlay
+          playsInline
+          muted
           mirrored={true}
           screenshotFormat="image/jpeg"
           videoConstraints={{ facingMode: 'user' }}
