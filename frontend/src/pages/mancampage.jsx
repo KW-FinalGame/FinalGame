@@ -112,6 +112,7 @@ const WideButton = styled.button`
   }
 `;
 
+
 function Mancam() {
   const navigate = useNavigate();
   const remoteVideoRef = useRef(null);
@@ -124,6 +125,7 @@ function Mancam() {
   const roomId = 'default-room';
 
   useEffect(() => {
+    console.log('[소켓] join-room 시도');
     socket.emit('join-room', { role: 'manager', roomId });
 
     const peer = new RTCPeerConnection({
@@ -132,46 +134,62 @@ function Mancam() {
     peerRef.current = peer;
 
     peer.ontrack = (event) => {
-      if (event.streams && event.streams[0]) {
-        remoteStreamRef.current = event.streams[0];
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
+      console.log('[WebRTC] 원격 트랙 수신');
+      if (remoteVideoRef.current) {
+        if (!remoteVideoRef.current.srcObject) {
+          remoteVideoRef.current.srcObject = new MediaStream();
         }
-        setIsConnected(true);
+        remoteVideoRef.current.srcObject.addTrack(event.track);
       }
     };
 
     peer.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('[WebRTC] ICE 후보 전송');
         socket.emit('ice-candidate', { candidate: event.candidate, roomId });
       }
     };
 
     peer.onconnectionstatechange = () => {
+      console.log('[WebRTC] 연결 상태 변경:', peer.connectionState);
       setDebug(`연결 상태: ${peer.connectionState}`);
+      setIsConnected(peer.connectionState === 'connected');
     };
 
-    socket.on('offer', async (offer) => {
+    socket.on('offer', async ({ offer }) => {
+      console.log('[소켓] offer 수신');
       try {
-        await peer.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
+        await peerRef.current.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log('[WebRTC] 원격 설명 설정 완료');
+
+        const stream = new MediaStream();
+        remoteStreamRef.current = stream;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream;
+        }
+
+        const answer = await peerRef.current.createAnswer();
+        await peerRef.current.setLocalDescription(answer);
         socket.emit('answer', { answer, roomId });
-      } catch (error) {
-        setDebug(`오류 발생: ${error.message}`);
+        console.log('[WebRTC] answer 전송 완료');
+      } catch (e) {
+        console.error('[오류] offer 처리 중:', e);
       }
     });
 
     socket.on('ice-candidate', async ({ candidate }) => {
+      console.log('[소켓] ICE 후보 수신');
       try {
         await peer.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('[WebRTC] ICE 후보 추가 완료');
       } catch (error) {
-        console.error('ICE 후보 처리 오류:', error);
+        console.error('[오류] ICE 후보 처리 실패:', error);
       }
     });
 
-    // 퇴장 알림 처리 (서버에서 'room-members' 이벤트로 인원변경 확인)
+    
     socket.on('room-members', (members) => {
+      console.log('[소켓] room-members 업데이트:', members);
       if (!members.includes(socket.id)) {
         setIsConnected(false);
         setDebug('상대방이 퇴장했습니다.');
@@ -183,11 +201,11 @@ function Mancam() {
     });
 
     socket.on('manager-status', ({ connected }) => {
-      // 필요시 매니저 연결 상태 처리 (옵션)
-      // console.log('매니저 연결 상태:', connected);
+      console.log('[소켓] manager-status:', connected);
     });
 
     socket.on('play-video-url', (url) => {
+      console.log('[소켓] 비디오 URL 수신:', url);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.src = url;
         remoteVideoRef.current.play().catch(err => console.error('비디오 재생 실패:', err));
@@ -195,14 +213,17 @@ function Mancam() {
     });
 
     socket.on('play-gif-url', (url) => {
+      console.log('[소켓] GIF URL 수신:', url);
       setGifUrl(url);
     });
 
     socket.on('error', (msg) => {
+      console.error('[소켓] 에러 수신:', msg);
       alert(msg);
     });
 
     return () => {
+      console.log('[정리] 이벤트 및 연결 정리');
       socket.off('offer');
       socket.off('ice-candidate');
       socket.off('room-members');
@@ -224,11 +245,12 @@ function Mancam() {
   }, [roomId]);
 
   const goBackToManage = () => {
+    console.log('[이동] 관리 페이지로 돌아감');
     navigate('/manage');
   };
 
-
   const handlePlayGif = (keyword) => {
+    console.log(`[소켓] GIF 요청 전송: ${keyword}`);
     socket.emit('trigger-gif', keyword);
   };
 

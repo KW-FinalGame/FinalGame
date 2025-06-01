@@ -102,65 +102,107 @@ function Cam() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    console.log("[Cam] 컴포넌트 마운트됨");
+  
     if (!isAuthenticated()) {
       alert("로그인이 필요합니다.");
       navigate('/');
       return;
     }
-
+  
+    console.log(`[Cam] Room 입장 요청: roomId = ${roomId}`);
     socket.emit('join-room', { roomId, role: 'customer' });
-
+  
     socket.on('room-info', ({ users }) => {
       const managerExists = users.some(user => user.role === 'manager');
+      console.log(`[room-info] 현재 접속자: ${JSON.stringify(users)} | 역무원 접속 여부: ${managerExists}`);
       setManagerOnline(managerExists);
       if (managerExists && !connected) {
+        console.log("[room-info] 역무원 접속됨 → WebRTC 연결 초기화 시도");
         initializeWebRTC();
       }
     });
-
+  
     socket.on('play-db-video', (url) => {
+      console.log(`[play-db-video] 영상 URL 수신: ${url}`);
       setVideoUrl(url);
       setShowVideoModal(true);
     });
-
+  
     socket.on('play-gif-url', (url) => {
-      // GIF 재생 시 로컬 스트림 잠시 중지
+      console.log(`[play-gif-url] GIF URL 수신: ${url}`);
       stopLocalStream();
       setVideoUrl(url);
       setShowVideoModal(true);
       setTimeout(() => {
+        console.log("[play-gif-url] GIF 재생 종료 → 스트림 복구");
         setShowVideoModal(false);
         setVideoUrl('');
         restoreLocalStream();
       }, 5000);
     });
-
+  
     socket.on('play-video-url', (url) => {
+      console.log(`[play-video-url] 스트리밍 URL 수신: ${url}`);
       stopLocalStream();
       if (webcamRef.current && webcamRef.current.video) {
         webcamRef.current.video.src = url;
         webcamRef.current.video.play().catch(console.error);
       }
     });
-
+  
+    socket.on('offer', async ({ offer }) => {
+      console.log('[WebRTC] offer 수신');
+    
+      const peer = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      peerRef.current = peer;
+    
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      // 화면 표시
+      if (webcamRef.current && webcamRef.current.video) {
+        webcamRef.current.video.srcObject = stream;
+      }
+    
+      stream.getTracks().forEach(track => peer.addTrack(track, stream));
+    
+      peer.onicecandidate = event => {
+        if (event.candidate) {
+          console.log('[WebRTC] ICE candidate 전송');
+          socket.emit('ice-candidate', { candidate: event.candidate, roomId });
+        }
+      };
+    
+      await peer.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+    
+      socket.emit('answer', { answer, roomId });
+      console.log('[WebRTC] answer 생성 및 전송 완료');
+    });
+    
     socket.on('answer', async ({ answer }) => {
       try {
+        console.log("[answer] 역무원으로부터 answer 수신");
         await peerRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
         setConnected(true);
       } catch (e) {
-        console.error("answer 처리 오류", e);
+        console.error("[answer] 처리 오류:", e);
       }
     });
-
+  
     socket.on('ice-candidate', async ({ candidate }) => {
       try {
+        console.log("[ice-candidate] ICE 후보 수신");
         await peerRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (err) {
-        console.error("ICE 후보 처리 오류", err);
+        console.error("[ice-candidate] 처리 오류:", err);
       }
     });
-
+  
     return () => {
+      console.log("[Cam] 컴포넌트 언마운트 → 소켓 해제 및 스트림 정리");
       socket.off('room-info');
       socket.off('play-db-video');
       socket.off('play-gif-url');
@@ -172,54 +214,62 @@ function Cam() {
       peerRef.current = null;
     };
   }, [roomId]);
-
+  
   const initializeWebRTC = async () => {
     try {
+      console.log("[WebRTC] 로컬 스트림 요청 중...");
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+  
       if (webcamRef.current && webcamRef.current.video) {
         webcamRef.current.video.srcObject = stream;
+        console.log("[WebRTC] 로컬 스트림 시작됨");
       }
-
+  
       const peer = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       });
       peerRef.current = peer;
-
+  
       stream.getTracks().forEach(track => peer.addTrack(track, stream));
-
+  
       peer.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log("[WebRTC] ICE 후보 전송");
           socket.emit('ice-candidate', { candidate: event.candidate, roomId });
         }
       };
-
+  
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
+      console.log("[WebRTC] offer 생성 및 전송");
       socket.emit('offer', { offer, roomId });
-
+  
     } catch (err) {
-      console.error("웹캠 초기화 실패:", err);
+      console.error("[WebRTC] 초기화 실패:", err);
     }
   };
-
+  
   const stopLocalStream = () => {
+    console.log("[WebRTC] 로컬 스트림 중지");
     if (webcamRef.current?.video?.srcObject) {
       webcamRef.current.video.srcObject.getTracks().forEach(track => track.stop());
       webcamRef.current.video.srcObject = null;
     }
   };
-
+  
   const restoreLocalStream = async () => {
     try {
+      console.log("[WebRTC] 로컬 스트림 복구 시도");
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       if (webcamRef.current && webcamRef.current.video) {
         webcamRef.current.video.srcObject = stream;
+        console.log("[WebRTC] 로컬 스트림 복구 완료");
       }
     } catch (err) {
-      console.error("로컬 스트림 복구 실패", err);
+      console.error("[WebRTC] 로컬 스트림 복구 실패:", err);
     }
   };
-
+  
 
   const goBackToMain = () => {
     navigate('/main');
