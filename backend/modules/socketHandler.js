@@ -34,6 +34,7 @@ const socketHandler = (server) => {
 
       io.to(roomId).emit('room-members', members);
       io.to(roomId).emit('manager-status', { connected: isManagerConnected });
+      
 
       // WebRTC 이벤트 핸들링
       socket.on('offer', (offer) => {
