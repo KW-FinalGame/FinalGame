@@ -225,7 +225,8 @@ function Cam() {
     try {
       console.log("[WebRTC] 로컬 스트림 요청 중...");
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-  
+      console.log('🎥 웹캠 스트림 시작', stream); 
+
       if (webcamRef.current && webcamRef.current.video) {
         webcamRef.current.video.srcObject = stream;
         console.log("[WebRTC] 로컬 스트림 시작됨");
