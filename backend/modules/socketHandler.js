@@ -16,25 +16,35 @@ const socketHandler = (server) => {
     socket.on('join-room', async ({ role, roomId }) => {
       const clients = io.sockets.adapter.rooms.get(roomId);
       const numClients = clients ? clients.size : 0;
-
-      `if (numClients >= 3) {
+    
+      if (numClients >= 3) {
         console.log('방이 가득 찼습니다.');
         socket.emit('room-full');
         return;
-      }`
-
+      }
+    
       socket.join(roomId);
       socket.role = role;
       socket.roomId = roomId;
-
+    
       console.log(`${role} 입장: ${socket.id} (room: ${roomId})`);
-
-      const members = Array.from(io.sockets.adapter.rooms.get(roomId));
-      const isManagerConnected = members.some(id => io.sockets.sockets.get(id)?.role === 'manager');
-
+    
+      const roomSet = io.sockets.adapter.rooms.get(roomId);
+      const members = roomSet ? Array.from(roomSet) : [];
+    
+      const isManagerConnected = members.some(
+        (id) => io.sockets.sockets.get(id)?.role === 'manager'
+      );
+    
       io.to(roomId).emit('room-members', members);
       io.to(roomId).emit('manager-status', { connected: isManagerConnected });
-      
+    
+      io.to(roomId).emit('room-info', {
+        roomId,
+        members,
+        isManagerConnected,
+      });
+
 
       // WebRTC 이벤트 핸들링
       socket.on('offer', (offer) => {
@@ -73,16 +83,19 @@ const socketHandler = (server) => {
 
       socket.on('disconnect', () => {
         console.log(`${role} 퇴장: ${socket.id} (room: ${roomId})`);
-
+    
         const room = io.sockets.adapter.rooms.get(roomId);
-        const stillManager = room
-          ? Array.from(room).some(id => io.sockets.sockets.get(id)?.role === 'manager')
-          : false;
-
+        const members = room ? Array.from(room) : [];
+    
+        const stillManager = members.some(
+          (id) => io.sockets.sockets.get(id)?.role === 'manager'
+        );
+    
         io.to(roomId).emit('manager-status', { connected: stillManager });
-        io.to(roomId).emit('room-members', Array.from(room || []));
+        io.to(roomId).emit('room-members', members);
       });
     });
+    
   });
 };
 

@@ -100,6 +100,7 @@ function Cam() {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoUrl, setVideoUrl] = useState('');
   const [connected, setConnected] = useState(false);
+  const previousStatusRef = useRef(false);
 
   useEffect(() => {
     console.log("[Cam] 컴포넌트 마운트됨");
@@ -113,15 +114,20 @@ function Cam() {
     console.log(`[Cam] Room 입장 요청: roomId = ${roomId}`);
     socket.emit('join-room', { roomId, role: 'customer' });
   
-    socket.on('room-info', ({ users }) => {
-      const managerExists = users.some(user => user.role === 'manager');
-      console.log(`[room-info] 현재 접속자: ${JSON.stringify(users)} | 역무원 접속 여부: ${managerExists}`);
-      setManagerOnline(managerExists);
-      if (managerExists && !connected) {
-        console.log("[room-info] 역무원 접속됨 → WebRTC 연결 초기화 시도");
+
+    socket.on('manager-status', ({ connected }) => {
+      console.log(`[manager-status] 역무원 접속 상태: ${connected}`);
+      setManagerOnline(connected);
+
+      if (connected && !previousStatusRef.current) {
+        console.log("[manager-status] 역무원 접속됨 → WebRTC 연결 초기화 시도");
         initializeWebRTC();
       }
+
+      previousStatusRef.current = connected;
     });
+
+    
   
     socket.on('play-db-video', (url) => {
       console.log(`[play-db-video] 영상 URL 수신: ${url}`);
