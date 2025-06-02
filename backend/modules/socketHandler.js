@@ -17,7 +17,7 @@ const socketHandler = (server) => {
       const clients = io.sockets.adapter.rooms.get(roomId);
       const numClients = clients ? clients.size : 0;
     
-      if (numClients >= 3) {
+      if (numClients >= 2) {
         console.log('방이 가득 찼습니다.');
         socket.emit('room-full');
         return;
