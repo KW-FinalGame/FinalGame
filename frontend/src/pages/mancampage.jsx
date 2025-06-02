@@ -118,6 +118,7 @@ function Mancam() {
   const remoteVideoRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const peerRef = useRef(null);
+  const pendingCandidates = useRef([]);
   const remoteStreamRef = useRef(null);
   const [gifUrl, setGifUrl] = useState(null);
   const [debug, setDebug] = useState('초기화 중...');
@@ -127,51 +128,70 @@ function Mancam() {
   useEffect(() => {
     console.log('[소켓] join-room 시도');
     socket.emit('join-room', { role: 'manager', roomId });
-
-    const peer = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-    peerRef.current = peer;
-
-    peer.ontrack = (event) => {
-      console.log('[WebRTC] 원격 트랙 수신');
-      if (remoteVideoRef.current) {
-        if (!remoteVideoRef.current.srcObject) {
-          remoteVideoRef.current.srcObject = new MediaStream();
-        }
-        remoteVideoRef.current.srcObject.addTrack(event.track);
-      }
-    };
-
-    peer.onicecandidate = (event) => {
-      if (event.candidate) {
-        console.log('[WebRTC] ICE 후보 전송');
-        socket.emit('ice-candidate', { candidate: event.candidate, roomId });
-      }
-    };
-
-    peer.onconnectionstatechange = () => {
-      console.log('[WebRTC] 연결 상태 변경:', peer.connectionState);
-      setDebug(`연결 상태: ${peer.connectionState}`);
-      setIsConnected(peer.connectionState === 'connected');
-    };
-
+    
+    
+    // offer 수신 처리
     socket.on('offer', async ({ offer }) => {
       console.log('[소켓] offer 수신');
       try {
-        await peerRef.current.setRemoteDescription(new RTCSessionDescription(offer));
-        console.log('[WebRTC] 원격 설명 설정 완료');
+        // 1. RTCPeerConnection 생성
+        const peer = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        });
 
+        // 2. ICE 후보 이벤트 등록
+        peer.onicecandidate = (event) => {
+          if (event.candidate) {
+            console.log('[WebRTC] ICE 후보 전송');
+            socket.emit('ice-candidate', { candidate: event.candidate, roomId });
+          }
+        };
+
+        // 3. 연결 상태 변화 이벤트 등록
+        peer.onconnectionstatechange = () => {
+          console.log('[WebRTC] 연결 상태 변경:', peer.connectionState);
+          setDebug(`연결 상태: ${peer.connectionState}`);
+          setIsConnected(peer.connectionState === 'connected');
+        };
+
+        // 4. remote 스트림 초기화 및 비디오 엘리먼트에 연결
         const stream = new MediaStream();
         remoteStreamRef.current = stream;
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = stream;
         }
 
-        const answer = await peerRef.current.createAnswer();
-        await peerRef.current.setLocalDescription(answer);
+        // 5. ontrack 이벤트 핸들러
+        peer.ontrack = (event) => {
+          console.log('[WebRTC] 원격 트랙 수신');
+          event.streams[0].getTracks().forEach(track => {
+            remoteStreamRef.current.addTrack(track);
+          });
+        };
+
+        // 6. 원격 설명 설정
+        await peer.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log('[WebRTC] 원격 설명 설정 완료');
+
+        // 7. answer 생성 및 로컬 설명 설정
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+
+        // 8. peerRef.current에 할당
+        peerRef.current = peer;
+
+        // 9. answer 소켓 전송
         socket.emit('answer', { answer, roomId });
         console.log('[WebRTC] answer 전송 완료');
+        // offer 처리 완료 후 이전에 임시 저장한 ICE 후보 추가
+        pendingCandidates.current.forEach(async (candidate) => {
+          try {
+            await peer.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (e) {
+            console.error('[오류] 임시 저장된 ICE 후보 추가 실패:', e);
+          }
+        });
+        pendingCandidates.current = [];
       } catch (e) {
         console.error('[오류] offer 처리 중:', e);
       }
@@ -180,12 +200,18 @@ function Mancam() {
     socket.on('ice-candidate', async ({ candidate }) => {
       console.log('[소켓] ICE 후보 수신');
       try {
-        await peer.addIceCandidate(new RTCIceCandidate(candidate));
-        console.log('[WebRTC] ICE 후보 추가 완료');
+        if (peerRef.current) {
+          await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log('[WebRTC] ICE 후보 추가 완료');
+        } else {
+          console.warn('[경고] peer가 아직 초기화되지 않음. ICE 후보 무시 또는 임시 저장 필요');
+          // 필요하면 후보 임시 저장 후 peer 생성 후 추가하는 로직 작성 가능
+        }
       } catch (error) {
         console.error('[오류] ICE 후보 처리 실패:', error);
       }
     });
+    
 
     
     socket.on('room-members', (members) => {
@@ -265,7 +291,6 @@ function Mancam() {
           ref={remoteVideoRef}
           autoPlay
           playsInline
-          muted
           style={{ width: '100%', height: '100%', transform: 'scaleX(-1)' }}
         />
       </WebcamBox>
