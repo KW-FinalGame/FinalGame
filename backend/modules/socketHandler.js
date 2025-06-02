@@ -94,6 +94,26 @@ const socketHandler = (server) => {
         io.to(roomId).emit('manager-status', { connected: stillManager });
         io.to(roomId).emit('room-members', members);
       });
+      
+      socket.on('leave-room', () => {
+        console.log(`${socket.role} 나감: ${socket.id} (room: ${roomId})`);
+      
+        socket.leave(roomId);
+      
+        // 현재 룸 멤버 조회
+        const room = io.sockets.adapter.rooms.get(roomId);
+        const members = room ? Array.from(room) : [];
+      
+        // 룸에 매니저가 여전히 접속해있는지 확인
+        const stillManager = members.some(
+          (id) => io.sockets.sockets.get(id)?.role === 'manager'
+        );
+      
+        // 룸 내에 매니저 접속 상태 및 멤버 리스트 실시간 전송
+        io.to(roomId).emit('manager-status', { connected: stillManager });
+        io.to(roomId).emit('room-members', members);
+      });
+      
     });
     
   });
