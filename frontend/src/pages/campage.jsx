@@ -279,8 +279,17 @@ function Cam() {
   
 
   const goBackToMain = () => {
-    navigate('/main');
-  };
+  // room에서 나가는 이벤트 emit
+  socket.emit('leave-room', { roomId, userId: 'customer' }); // userId가 필요하면 맞게 수정하세요.
+
+  // WebRTC 스트림 정리 (선택 사항)
+  stopLocalStream();
+  peerRef.current?.close();
+  peerRef.current = null;
+
+  // 메인 화면으로 이동
+  navigate('/main');
+};
 
   const handleVideoEnded = () => {
     setShowVideoModal(false);

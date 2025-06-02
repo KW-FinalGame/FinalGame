@@ -272,8 +272,21 @@ function Mancam() {
 
   const goBackToManage = () => {
     console.log('[이동] 관리 페이지로 돌아감');
+  
+    // 룸 나가기 이벤트 소켓으로 알림
+    socket.emit('leave-room', { roomId, userId: 'manager' }); // userId는 상황에 맞게 수정하세요.
+  
+    // WebRTC 연결 종료 및 스트림 정리 (필요하면)
+    if (peerRef.current) {
+      peerRef.current.close();
+      peerRef.current = null;
+    }
+    
+  
+    // 페이지 이동
     navigate('/manage');
   };
+  
 
   const handlePlayGif = (keyword) => {
     console.log(`[소켓] GIF 요청 전송: ${keyword}`);
