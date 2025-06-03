@@ -112,10 +112,20 @@ const WideButton = styled.button`
   }
 `;
 
+function getBlackStream() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 480;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  return canvas.captureStream(5);
+}
 
 function Mancam() {
   const navigate = useNavigate();
   const remoteVideoRef = useRef(null);
+  const [videoKey, setVideoKey] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const peerRef = useRef(null);
   const pendingCandidates = useRef([]);
@@ -196,6 +206,27 @@ function Mancam() {
         console.error('[오류] offer 처리 중:', e);
       }
     });
+
+    socket.on('room-members', (members) => {
+      if (!members.includes(socket.id)) {
+        setIsConnected(false);
+
+        if (remoteVideoRef.current?.srcObject) {
+          remoteVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
+        }
+
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = getBlackStream();
+          setVideoKey(prev => prev + 1);
+        }
+
+        if (peerRef.current) {
+          peerRef.current.close();
+          peerRef.current = null;
+        }
+      }
+    });
+
 
     socket.on('ice-candidate', async ({ candidate }) => {
       console.log('[소켓] ICE 후보 수신');
@@ -301,9 +332,11 @@ function Mancam() {
 
       <WebcamBox>
         <video
+          key={videoKey}
           ref={remoteVideoRef}
           autoPlay
           playsInline
+          muted
           style={{ width: '100%', height: '100%', transform: 'scaleX(-1)' }}
         />
       </WebcamBox>
