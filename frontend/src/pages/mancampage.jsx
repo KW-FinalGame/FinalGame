@@ -244,18 +244,42 @@ function Mancam() {
     });
     
 
-    
     socket.on('room-members', (members) => {
       console.log('[소켓] room-members 업데이트:', members);
-      if (!members.includes(socket.id)) {
+    
+      const myId = socket.id;
+      const otherMembers = members.filter((id) => id !== myId);
+    
+      if (otherMembers.length === 0) {
+        // ✅ 상대방 퇴장 시 처리
+        console.log('[WebRTC] 상대방 퇴장 감지');
+    
+        if (peerRef.current) {
+          peerRef.current.close();
+          peerRef.current = null;
+          console.log('[WebRTC] peer 연결 종료');
+        }
+    
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.style.opacity = '0'; // 영상 숨김
+          // remoteVideoRef.current.srcObject = null; // 원한다면 해제
+        }
+    
         setIsConnected(false);
         setDebug('상대방이 퇴장했습니다.');
-        if (remoteVideoRef.current?.srcObject) {
-          remoteVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
-          remoteVideoRef.current.srcObject = null;
+      } else {
+        // ✅ 상대방 입장 시 처리
+        console.log('[WebRTC] 상대방 입장 감지');
+    
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.style.opacity = '1'; // 영상 보이기
         }
+    
+        setDebug('상대방이 입장했습니다.');
       }
     });
+    
+    
 
     socket.on('manager-status', ({ connected }) => {
       console.log('[소켓] manager-status:', connected);
