@@ -22,14 +22,7 @@ const PageWrapper = styled.div`
   margin: 0 auto;
   width: 100%;
   
- 
-  /* ✅ PC 버전에서만 테두리/그림자 */
-  @media (min-width: 769px) {
-    padding: 40px 0px;
-    border: 4px solid lightgray;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  } 
+
 `;
 
 const LogoBlock = styled.div`
@@ -47,7 +40,7 @@ const LogoTextTop = styled.h1`
   color: #273A96;
   font-size: 70px;
   font-weight: bold;
-  margin-top: 150px;
+  margin-top: 15vh; /* 🔄 뷰포트 높이의 20% */
   margin-left:80px;
   margin-bottom: 0px;
 
@@ -56,7 +49,7 @@ const LogoTextTop = styled.h1`
   }
 
   @media (max-width: 480px) {
-    margin-top: 150px;
+    margin-top: 15vh; /* 🔄 뷰포트 높이의 20% */
     margin-left:40px;
     font-size: 60px;
   }
