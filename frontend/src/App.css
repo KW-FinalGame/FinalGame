@@ -1,0 +1,26 @@
+@font-face {
+    font-family: 'YeongdoBold';
+    src: url('../public/fonts/Yeongdo-Bold.ttf') format('truetype'),
+         url('../public/fonts/YeongdoOTF-Bold.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+  }
+@font-face {
+    font-family: 'GoyangDeokYangB';  /* 원하는 폰트 이름 지정 */
+    src: url('../public/fonts/고양덕양\ B.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+@font-face {
+    font-family: 'GyeonggiCheonnyeonLight';  /* 원하는 폰트 이름 지정 */
+    src: url('../public/fonts/경기천년제목_Light.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+/* 모든 요소에 폰트 적용 */
+body, html, #root {
+    font-family: 'GyeonggiCheonnyeonLight', sans-serif;
+  }
+  
