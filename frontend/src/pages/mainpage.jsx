@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import subway from "../assets/imgs/subway.png";
 import axios from 'axios';
 import { isAuthenticated } from '../utils/auth';
+import Link from "../assets/imgs/link.png"; 
+import Station from "../assets/imgs/station.png";
 
 // 호선별 색상 매핑
 const lineColors = {
@@ -21,96 +23,142 @@ const lineColors = {
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  align-items: center;
+  background-color: #273A96;
+
+  
+  /* 중앙 정렬 + 폭 제한 */
+  max-width: 480px;  // 모바일 크기 기준
+  margin: 0 auto;
+  width: 100%;
+  
+  height: 100vh;   
+  overflow-x: hidden; // ✅ 좌우 스크롤 막기
+
+  /* ✅ 테두리와 그림자 추가 */
+  border: 2px solid lightgray;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // 살짝 그림자
 `;
 
-const Header = styled.header`
-  border-bottom: 3px solid #D9D9D9;
-  padding: 25px;
-  text-align: center;
+const Logocontainer = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
 `;
 
-const LogoText = styled.h1`
-  color: gray;
-  margin: 0;
-  font-size: 50px;
-  font-weight: bold;
+const Logoicon = styled.img`
+width: 30px; /* 텍스트 크기(30px)에 맞춰 조정 */
+height: 30px;
+margin: 45px 0 5px 50px; /* Logotext padding에 맞춰 정렬 */
+margin-right: 0em;
+`;
+
+const Logotext = styled.h1`
+  font-family: 'YeongdoBold';
+  align-self: flex-start;
+  color: #FFFFFF;
+  font-size: 30px;
+  padding: 45px 15px 5px 10px; 
+  margin-top:-4px;
+
   @media (max-width: 768px) {
     font-size: 30px;
   }
+
   @media (max-width: 480px) {
-    font-size: 24px;
+    font-size: 30px;
   }
 `;
+
+const Stationimg = styled.img`
+  margin-top:-30px;
+  margin-left:18vh;
+  margin-right:-81px;
+  margin bottom:-20px;
+
+  width: 45%;
+  height: auto;
+
+  @media (max-width: 480px) {
+    width: 45%;
+    height: auto;
+  }
+`;
+
+const WhiteBox = styled.div`
+  width: 100%;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+  margin-top:-14px;
+  box-sizing: border-box;
+
+  
+  /* 위쪽 모서리에만 둥근 처리 */
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px;
+`;
+
 
 const TopWrapper = styled.div`
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
-  gap: 20px;
-  padding-bottom: 0px;
+  width: 100%;
+  max-width: 450px; /* ✅ GrayBox와 너비 맞춤 */
+  padding-left: 45px; /* ✅ 좌측 정렬 이쁘게 */
 `;
 
-const SubwayLogo = styled.img`
-  width: 120px;
-  height: 120px;
-  object-fit: contain;
-  margin-left : -30px;
-  margin-top:10px;
-  margin-bottom: -20px;
-  @media (max-width: 768px) {
-    width: 60px;
-    height: 60px;
-  }
-`;
 
 const UserName = styled.div`
-  font-size: 45px;
+  font-size: 25px;
   font-weight: bold;
   color: #333;
-  margin-top:10px;
   margin-bottom: -20px;
   @media (max-width: 768px) {
-    font-size: 42px;
-  }
-  @media (max-width: 480px) {
     font-size: 35px;
   }
+  @media (max-width: 480px) {
+    font-size: 30px;
+  }
+`;
+const Title = styled.div`
+  font-size: 25px;
+  font-weight: bold;
+  margin-top:15px;
+  text-align: left;
 `;
 
 const GrayBoxWrapper = styled.div`
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: center;
 `;
 
 const GrayBox = styled.div`
   background-color: #f0f0f0;
-  width: 80%;
+  width: 100%;
   max-width: 450px;
-  height: 85%;
+  height: 65%;
   border-radius: 15px;
-  border: 2.5px solid #ccc;
-  margin-top:-60px;
+  border: 1.5px solid #ccc;
+  margin-top:20px;
   display: flex;
   flex-direction: column;
   padding: 20px;
   overflow: hidden;
 
-  @media (max-width: 768px) {
-    width: 90%;
+  @media (max-width: 480px) {
+    width: 80%;
+    height: 60%;
   }
 `;
 
-const Title = styled.div`
-  font-size: 25px;
-  font-weight: bold;
-  margin-bottom: 8px;
-  margin-top:15px;
-  text-align: left;
-  padding-left: 8px;
-`;
 
 const StationList = styled.div`
   max-height: 700px;
@@ -169,7 +217,7 @@ const LineCircle = styled.div`
 const StationName = styled.div`
   font-size: 23px;
   color: #333;
-`;
+`; 
 
 const ModalBackdrop = styled.div`
   position: fixed;
@@ -228,18 +276,7 @@ const CloseButton = styled.button`
     background-color: #EE3232;
   }
 `;
-const LogoutText = styled.div`
-  text-align: center;
-  font-size: 20px;
-  margin-top:-60px;
-  color: #666;
-  text-decoration: underline;
-  cursor: pointer;
 
-  &:hover {
-    color: #333;
-  }
-`;
 function Main() {
   const [stations, setStations] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
@@ -304,41 +341,42 @@ function Main() {
     navigate('/cam', { state: { stationName: selectedStation } });
   };
 
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate('/');
-  };
+  
   
   return (
     <PageWrapper>
-      <Header>
-        <LogoText>LOGOTEXT</LogoText>
-      </Header>
+      <Logocontainer>
+        <Logoicon src={Link} alt="링크 아이콘 이미지"></Logoicon>
+        <Logotext>손말이음</Logotext>
+        </Logocontainer>
 
+        <Stationimg src={Station} alt="지하철역 이미지" />
+    <WhiteBox>
       <TopWrapper>
-        <SubwayLogo src={subway} alt="지하철 로고" />
           <UserName>{username}님</UserName> {/* ✅ 이름 출력 */}
+      <Title>현재 지하철 역을 선택하세요!</Title>
       </TopWrapper>
 
       <GrayBoxWrapper>
-  <GrayBox>
-    <Title>해당 역을 선택하세요!</Title>
-    <StationList>
-      {stations.map((station, index) => {
-        const lineNumber = parseInt(station.line.toString().match(/\d+/)?.[0], 10);
-        return (
-          <StationItem key={index} onClick={() => handleStationClick(station.name)}>
-            <LineCircle line={lineNumber}>{lineNumber}</LineCircle>
-            <StationName>{station.name}</StationName>
-          </StationItem>
-        );
-      })}
-    </StationList>
-  </GrayBox>
+      <GrayBox>
+        <StationList>
+          {stations.map((station, index) => {
+            const lineNumber = parseInt(station.line.toString().match(/\d+/)?.[0], 10);
+            return (
+              <StationItem key={index} onClick={() => handleStationClick(station.name)}>
+                <LineCircle line={lineNumber}>{lineNumber}</LineCircle>
+                <StationName>{station.name}</StationName>
+              </StationItem>
+            );
+          })}
+        </StationList>
+      </GrayBox>
+
+
+
 </GrayBoxWrapper>
+</WhiteBox>
 
-
-<LogoutText onClick={handleLogout}>로그아웃</LogoutText> 
       {/* 모달 창 */}
       {selectedStation && (
         <ModalBackdrop>

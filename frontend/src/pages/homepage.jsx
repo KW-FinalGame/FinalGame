@@ -19,7 +19,11 @@ const PageWrapper = styled.div`
   width: 100%;
   height: 100vh;   
   
-
+  
+  /* ✅ 테두리와 그림자 추가 */
+  border: 2px solid lightgray;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // 살짝 그림자
 `;
 
 const LogoBlock = styled.div`
@@ -104,7 +108,7 @@ const ButtonWrapper = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 30px;
+  margin-top: 50px;
   gap: 12px; // 버튼 사이 여백
 `;
 
