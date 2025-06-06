@@ -99,6 +99,7 @@ const WhiteBox = styled.div`
   padding-top: 10px;
   margin-top:-14px;
   box-sizing: border-box;
+  padding: 15px 10px 0px 10px;
 
   
   /* 위쪽 모서리에만 둥근 처리 */
@@ -153,12 +154,12 @@ const GrayBox = styled.div`
   margin-bottom:20px;
   display: flex;
   flex-direction: column;
-  padding: 15px 40px 0px 40px;
+  padding: 15px 20px 0px 20px;
   overflow: hidden;
 
   @media (max-width: 480px) {
-    width: 100%;
-    padding: 15px 15px 0px 15px;
+    width: 80%;
+    padding: 15px 15px 0px 0px;
   }
 `;
 
@@ -186,12 +187,11 @@ const StationList = styled.div`
 const StationItem = styled.div`
   display: flex;
   align-items: center;
-  background-color: white;
-  padding: 15px 20px;
   border-radius: 10px;
   margin-bottom: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  cursor: pointer;  
   font-size: 25px;
+  background-color: transparent;  // 배경 투명
   line-height: 2.5;
 
   @media (max-width: 768px) {
@@ -199,7 +199,8 @@ const StationItem = styled.div`
   }
 
   @media (max-width: 480px) {
-    padding: 10px 12px;
+    padding: 10px 12px; 
+    font-size: 20px;
   }
 `;
 
