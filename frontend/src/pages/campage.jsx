@@ -6,6 +6,7 @@ import Webcam from 'react-webcam';
 import io from 'socket.io-client';
 import { isAuthenticated } from '../utils/auth';
 import Modal from 'react-modal';
+import Link from "../assets/imgs/link.png"; 
 
 const socket = io('http://localhost:3002');
 
@@ -13,28 +14,54 @@ const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 30px;
-`;
+  background-color: #273A96;
 
-const Header = styled.header`
-  border-bottom: 3px solid #D9D9D9;
-  padding: 25px;
-  text-align: center;
+  
+  /* 중앙 정렬 + 폭 제한 */
+  max-width: 480px;  // 모바일 크기 기준
+  margin: 0 auto;
   width: 100%;
+  
+  min-height: 100vh;   
+  overflow-x: hidden; // ✅ 좌우 스크롤 막기
+
+  /* ✅ 테두리와 그림자 추가 */
+  border: 2px solid lightgray;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // 살짝 그림자
 `;
 
-const LogoText = styled.h1`
-  color: gray;
-  margin: 0;
-  font-size: 50px;
-  font-weight: bold;
+const Logocontainer = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+`;
+
+const Logoicon = styled.img`
+width: 30px; /* 텍스트 크기(30px)에 맞춰 조정 */
+height: 30px;
+margin: 45px 0 5px 50px; /* Logotext padding에 맞춰 정렬 */
+margin-right: 0em;
+`;
+
+const Logotext = styled.h1`
+  font-family: 'YeongdoBold';
+  align-self: flex-start;
+  color: #FFFFFF;
+  font-size: 30px;
+  padding: 45px 15px 5px 10px; 
+  margin-top:-4px;
+
   @media (max-width: 768px) {
     font-size: 30px;
   }
+
   @media (max-width: 480px) {
-    font-size: 24px;
+    font-size: 30px;
   }
 `;
+
 
 const WebcamBox = styled.div`
   margin-top: 40px;
@@ -44,19 +71,33 @@ const WebcamBox = styled.div`
   background: black;
   border-radius: 15px;
   overflow: hidden;
+
+  
+  /* ✅ 테두리와 그림자 추가 */
+  border: 2px solid gray;
+  border-radius: 10px;
+  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.2); // 살짝 그림자
 `;
 
 const TextBox = styled.div`
   width: 80%;
   max-width: 500px;
+  margin-top: 50px;
+  font-size: 30px;
+  color: lightgray;
+  text-align: center;
+`;
+const TextBox2 = styled.div`
+  width: 80%;
+  max-width: 500px;
+  margin-top: 30px;
+  font-size: 25px;
+  color: blalck;
+  text-align: center;
   background-color: #f0f0f0;
   border: 2px solid #ccc;
   border-radius: 10px;
   padding: 15px;
-  margin-top: 20px;
-  font-size: 18px;
-  color: #333;
-  text-align: center;
 `;
 
 const RoundButton = styled.button`
@@ -67,7 +108,7 @@ const RoundButton = styled.button`
   font-size: 25px;
   border: none;
   border-radius: 50%;
-  margin-top: 30px;
+  margin-top: 50px;
   cursor: pointer;
   &:hover {
     background-color: #c02727;
@@ -77,8 +118,10 @@ const RoundButton = styled.button`
 const StatusIndicator = styled.div`
   display: flex;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 20px;
   gap: 8px;
+  font-size:20px;
+  color: #ffffff;
 `;
 
 const Circle = styled.div`
@@ -298,9 +341,10 @@ function Cam() {
 
   return (
     <PageWrapper>
-      <Header>
-        <LogoText>LOGOTEXT</LogoText>
-      </Header>
+      <Logocontainer>
+        <Logoicon src={Link} alt="링크 아이콘 이미지"></Logoicon>
+        <Logotext>손말이음</Logotext>
+        </Logocontainer>
       
       <TextBox>
         <strong>{stationName}</strong> 의 역무원
@@ -349,9 +393,9 @@ function Cam() {
         <span>{isManConnected ? '역무원 접속중' : '역무원 미접속'}</span>
       </StatusIndicator>
 
-      <TextBox>
+      <TextBox2>
         여기에 사용자의 수화를 인식한 텍스트가 나와요.
-      </TextBox>
+      </TextBox2>
 
       <RoundButton onClick={goBackToMain}>✆</RoundButton>
     </PageWrapper>
