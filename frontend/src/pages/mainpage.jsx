@@ -145,8 +145,9 @@ const GrayBoxWrapper = styled.div`
 `;
 
 const GrayBox = styled.div`
+position: relative; /* 세로줄의 기준이 되는 relative 위치 */
   background-color: #f0f0f0;
-  width: 100%;
+  width: 90%;
   height: 55vh;
   border-radius: 15px;
   border: 1.5px solid #ccc;
@@ -158,17 +159,35 @@ const GrayBox = styled.div`
   overflow: hidden;
 
   @media (max-width: 480px) {
-    width: 80%;
+    width: 90%;
     padding: 15px 15px 0px 0px;
   }
 `;
 
+const VerticalLine = styled.div`
+  position: absolute;
+  top: 0;
+  bottom: 0;  /* LineCircle의 중심에 맞춰 조정 */
+  width: 3px;
+  background-color: #ccc;
+  z-index: 0; /* LineCircle 뒤에 배치 */
+  left:55px;
+
+  @media (max-width: 768px) {
+    left: 70px;
+  }
+  @media (max-width: 480px) {
+    left: 43px;
+  }
+`;
 
 const StationList = styled.div`
+position: relative;  /* ⭐ 필수 */
   max-height: 55vh;
   overflow-y: auto;
   width: 100%;
   padding: 0 10px;
+  margin-bottom:10px;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -185,6 +204,7 @@ const StationList = styled.div`
 `;
 
 const StationItem = styled.div`
+position: relative;  // ⭐ 필요함
   display: flex;
   align-items: center;
   border-radius: 10px;
@@ -193,6 +213,7 @@ const StationItem = styled.div`
   font-size: 25px;
   background-color: transparent;  // 배경 투명
   line-height: 2.5;
+  z-index: 1;  // ⭐ 세로선보다 위
 
   @media (max-width: 768px) {
     padding: 12px 15px;
@@ -203,10 +224,42 @@ const StationItem = styled.div`
     font-size: 20px;
   }
 `;
+const StationTextWrapper = styled.div`
+  display: flex;
+  flex-direction: row;  /* ⬅️ 가로 정렬 */
+  align-items: center;
+  gap: 10px;             /* 호선과 역 이름 간격 */
+  flex-grow: 1;
+
+  @media (max-width: 480px) {
+    gap: 20px; 
+  }
+`;
+
+const LineLabel = styled.span`
+  font-size: 16px;
+  color: gray;
+  margin-bottom: -2px;
+
+  @media (max-width: 480px) {
+    font-size: 13px;
+  }
+`;
+
+const DistanceText = styled.span`
+  font-size: 16px;
+  color: #555;
+  margin-left: auto; /* 오른쪽 정렬 */
+  white-space: nowrap;
+
+  @media (max-width: 480px) {
+    font-size: 13px;
+  }
+`;
 
 const LineCircle = styled.div`
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   background-color: ${props => lineColors[props.line] || '#aaa'};
   color: white;
   font-weight: bold;
@@ -216,11 +269,23 @@ const LineCircle = styled.div`
   justify-content: center;
   margin-right: 15px;
   flex-shrink: 0;
+
+  @media (max-width: 480px) {
+    width: 45px;
+  height: 45px;
+  }
 `;
 
 const StationName = styled.div`
   font-size: 23px;
   color: #333;
+  font-weight: bold;
+
+  @media (max-width: 480px) {
+    font-size : 20px;
+    font-weight: bold;
+
+  }
 `; 
 
 const ModalBackdrop = styled.div`
@@ -363,14 +428,25 @@ function Main() {
 
       <GrayBoxWrapper>
       <GrayBox>
+        <VerticalLine />
         <StationList>
+          
           {stations.map((station, index) => {
             const lineNumber = parseInt(station.line.toString().match(/\d+/)?.[0], 10);
             return (
               <StationItem key={index} onClick={() => handleStationClick(station.name)}>
                 <LineCircle line={lineNumber}>{lineNumber}</LineCircle>
-                <StationName>{station.name}</StationName>
-              </StationItem>
+
+                <StationTextWrapper>
+                  <LineLabel>{lineNumber}호선</LineLabel>
+                  <StationName>{station.name}</StationName>
+                </StationTextWrapper>
+                <DistanceText>
+                    {typeof station.distance_km === "number" ? `📍${station.distance_km.toFixed(2)}km` : ""}
+                  </DistanceText>
+
+                  </StationItem>
+
             );
           })}
         </StationList>
