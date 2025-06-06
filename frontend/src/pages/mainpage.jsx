@@ -32,7 +32,7 @@ const PageWrapper = styled.div`
   margin: 0 auto;
   width: 100%;
   
-  height: 100vh;   
+  min-height: 100vh;   
   overflow-x: hidden; // ✅ 좌우 스크롤 막기
 
   /* ✅ 테두리와 그림자 추가 */
@@ -75,7 +75,7 @@ const Logotext = styled.h1`
 const Stationimg = styled.img`
   margin-top:-30px;
   margin-left:18vh;
-  margin-right:-81px;
+  margin-right:-115px;
   margin bottom:-20px;
 
   width: 45%;
@@ -84,11 +84,14 @@ const Stationimg = styled.img`
   @media (max-width: 480px) {
     width: 45%;
     height: auto;
+    margin-right:-81px;
+    margin bottom:-20px;
   }
 `;
 
 const WhiteBox = styled.div`
   width: 100%;
+  height:74vh;
   background-color: white;
   display: flex;
   flex-direction: column;
@@ -143,25 +146,25 @@ const GrayBoxWrapper = styled.div`
 const GrayBox = styled.div`
   background-color: #f0f0f0;
   width: 100%;
-  max-width: 450px;
-  height: 65%;
+  height: 55vh;
   border-radius: 15px;
   border: 1.5px solid #ccc;
   margin-top:20px;
+  margin-bottom:20px;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 15px 40px 0px 40px;
   overflow: hidden;
 
   @media (max-width: 480px) {
-    width: 80%;
-    height: 60%;
+    width: 100%;
+    padding: 15px 15px 0px 15px;
   }
 `;
 
 
 const StationList = styled.div`
-  max-height: 700px;
+  max-height: 55vh;
   overflow-y: auto;
   width: 100%;
   padding: 0 10px;
