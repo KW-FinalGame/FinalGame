@@ -2,6 +2,7 @@
 import React, { useState,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
 
 import { Button } from 'react-bootstrap';
 import axios from 'axios';
@@ -104,9 +105,11 @@ const StyledImage = styled.img`
   width: 75%;
   height: auto;
 
+  margin-left:80px;
   @media (max-width: 480px) {
     width: 80%;
     height: auto;
+    margin-left:30px;
   }
 `;
 
@@ -120,6 +123,7 @@ const CustomButton = styled(Button)`
   outline: none !important;
   box-shadow: none !important;
   margin-top:70px;
+  margin-left:80px;
   
   
   width: 65%;        /* ✅ 부모(PageWrapper) 너비만큼 */
@@ -134,6 +138,7 @@ const CustomButton = styled(Button)`
     margin-top:50px;
     width: 85%;
     font-size: 25px;
+    margin-left:30px;
   }
 `;
 
@@ -183,7 +188,13 @@ function Start() {
         <Logoicon src={Link} alt="링크 아이콘 이미지"></Logoicon>
         <Logotext>손말이음</Logotext>
         </Logocontainer>
-        
+
+        <motion.div
+      initial={{ opacity: 1, y: 0 }}       // 시작은 원래 위치
+      exit={{ opacity: 0, y: -100 }}       // 사라질 때 위로 밀려나감
+      transition={{ duration: 1.0}}
+    >
+
         <Usercontainer>
             <UserName>
             <strong>{username}님</strong> 
@@ -198,7 +209,8 @@ function Start() {
         도움요청하기
       </CustomButton>
       
-    <LogoutText onClick={handleLogout}>로그아웃</LogoutText> 
+    <LogoutText onClick={handleLogout}>로그아웃</LogoutText>
+    </motion.div> 
     </PageWrapper>
   );
 }
