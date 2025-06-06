@@ -6,6 +6,7 @@ import axios from 'axios';
 import { isAuthenticated } from '../utils/auth';
 import Link from "../assets/imgs/link.png"; 
 import Station from "../assets/imgs/station.png";
+import { motion } from 'framer-motion';
 
 // 호선별 색상 매핑
 const lineColors = {
@@ -74,8 +75,7 @@ const Logotext = styled.h1`
 
 const Stationimg = styled.img`
   margin-top:-30px;
-  margin-left:18vh;
-  margin-right:-115px;
+  margin-left:30vh;
   margin bottom:-20px;
 
   width: 45%;
@@ -85,6 +85,7 @@ const Stationimg = styled.img`
     width: 45%;
     height: auto;
     margin-right:-81px;
+    margin-left:27vh;
     margin bottom:-20px;
   }
 `;
@@ -115,7 +116,12 @@ const TopWrapper = styled.div`
   justify-content: center;
   width: 100%;
   max-width: 450px; /* ✅ GrayBox와 너비 맞춤 */
-  padding-left: 45px; /* ✅ 좌측 정렬 이쁘게 */
+  padding-left:25px; /* ✅ 좌측 정렬 이쁘게 */
+  padding-top:10px;
+
+  @media (max-width: 480px) {
+    padding-left: 25px;
+  }
 `;
 
 
@@ -151,7 +157,7 @@ position: relative; /* 세로줄의 기준이 되는 relative 위치 */
   height: 55vh;
   border-radius: 15px;
   border: 1.5px solid #ccc;
-  margin-top:20px;
+  margin-top:10px;
   margin-bottom:20px;
   display: flex;
   flex-direction: column;
@@ -409,7 +415,26 @@ function Main() {
   const OpenCam = () => {
     navigate('/cam', { state: { stationName: selectedStation } });
   };
-
+  const containerVariants = {
+    initial: {},
+    animate: {
+      transition: {
+        staggerChildren: 0.3,  // 자식들 간 0.3초 간격
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 },
+    },
+  };
+  
+  // 자식 애니메이션 (아래에서 위로 등장)
+  const itemVariants = {
+    initial: { opacity: 0, y: 100 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+    exit: { opacity: 0, transition: { duration: 0.3 } },
+  };
+  
   
   
   return (
@@ -419,7 +444,19 @@ function Main() {
         <Logotext>손말이음</Logotext>
         </Logocontainer>
 
-        <Stationimg src={Station} alt="지하철역 이미지" />
+
+        <motion.div
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
+            <motion.div variants={itemVariants}>
+              <Stationimg src={Station} alt="지하철역 이미지" />
+            </motion.div>
+
+            
+      <motion.div variants={itemVariants}>
     <WhiteBox>
       <TopWrapper>
           <UserName>{username}님</UserName> {/* ✅ 이름 출력 */}
@@ -456,6 +493,8 @@ function Main() {
 
 </GrayBoxWrapper>
 </WhiteBox>
+</motion.div>
+</motion.div>
 
       {/* 모달 창 */}
       {selectedStation && (
