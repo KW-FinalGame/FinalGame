@@ -24,6 +24,10 @@ const PageWrapper = styled.div`
   
   height: 100vh;   
   
+  /* ✅ 테두리와 그림자 추가 */
+  border: 2px solid lightgray;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // 살짝 그림자
 
 `;
 
@@ -62,8 +66,13 @@ const Usercontainer = styled.div`
   display: flex;
   flex-direction: column;
   align-self: flex-start; /* 왼쪽 정렬 */
-  padding-left: 50px;      /* 왼쪽 여백 */
+  padding-left: 80px;      /* 왼쪽 여백 */
   margin-top: 50px;
+
+  @media (max-width: 480px) {
+    
+    padding-left: 50px; 
+    }
 `;
 
 const UserName = styled.h2`
@@ -71,22 +80,32 @@ const UserName = styled.h2`
   font-size: 40px;
   
   margin: 0;
+
+  @media (max-width: 480px) {
+    
+  font-size: 35px;
+  }
 `;
 
 const Usertext = styled.p`
   color: white;
   font-size: 40px;
   margin-top: 8px;
+
+  @media (max-width: 480px) {
+    
+  font-size: 35px;
+  }
 `;
 
 const StyledImage = styled.img`
   margin-top:20px;
   margin-left:10px;
-  width: 85%;
+  width: 75%;
   height: auto;
 
   @media (max-width: 480px) {
-    width: 90%;
+    width: 80%;
     height: auto;
   }
 `;
@@ -94,25 +113,25 @@ const StyledImage = styled.img`
 const CustomButton = styled(Button)`
   background-color: #FFFFFF !important;
   border: none !important;
-  font-size: 30px;
+  font-size: 25px;
   font-weight: bold;
   color: gray !important;
   border-radius: 20px;
   outline: none !important;
   box-shadow: none !important;
-  margin-top:80px;
+  margin-top:70px;
   
   
-  width: 80%;        /* ✅ 부모(PageWrapper) 너비만큼 */
+  width: 65%;        /* ✅ 부모(PageWrapper) 너비만큼 */
   max-width: 100%; 
-  padding: 10px 90px;
+  padding: 10px 70px;
 
   &:hover {
     background-color: #687AD1 !important;
   }
 
   @media (max-width: 480px) {
-    margin-top:60px;
+    margin-top:50px;
     width: 85%;
     font-size: 25px;
   }
