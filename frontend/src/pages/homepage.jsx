@@ -6,10 +6,6 @@ import { Button } from 'react-bootstrap';
 import axios from 'axios';
 import Webcam from 'react-webcam';
 import linklogo from "../assets/imgs/logo_link.png"; 
-import YeongdoBoldTTF from '../assets/fonts/Yeongdo-Bold.ttf';
-import YeongdoBoldOTF from '../assets/fonts/YeongdoOTF-Bold.otf';
-import { createGlobalStyle } from 'styled-components';
-
 
 const PageWrapper = styled.div`
   display: flex;
@@ -21,6 +17,7 @@ const PageWrapper = styled.div`
   max-width: 480px;  // 모바일 크기 기준
   margin: 0 auto;
   width: 100%;
+  height: 100vh;   
   
 
 `;
@@ -292,7 +289,7 @@ function Home() {
       localStorage.setItem('user', JSON.stringify({ username: loginId, role }));
   
       setShowModal(false);
-      navigate(role === 'admin' ? '/manage' : '/main');
+      navigate(role === 'admin' ? '/manage' : '/start');
     } catch (error) {
       console.error('로그인 실패:', error);
       alert('로그인에 실패했습니다.');
