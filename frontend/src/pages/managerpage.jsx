@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import man from "../assets/imgs/man.png";
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
+import Link from "../assets/imgs/link.png"; 
 
 const socket = io('http://localhost:3002'); // 서버 주소에 맞게 변경
 
@@ -10,25 +11,51 @@ const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-`;
+  background-color: #273A96;
 
-const Header = styled.header`
-  border-bottom: 3px solid #D9D9D9;
-  padding: 25px;
-  text-align: center;
+  
+  /* 중앙 정렬 + 폭 제한 */
+  max-width: 480px;  // 모바일 크기 기준
+  margin: 0 auto;
   width: 100%;
+  
+  min-height: 100vh;   
+  overflow-x: hidden; // ✅ 좌우 스크롤 막기
+
+  /* ✅ 테두리와 그림자 추가 */
+  border: 2px solid lightgray;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // 살짝 그림자
 `;
 
-const LogoText = styled.h1`
-  color: gray;
-  margin: 0;
-  font-size: 50px;
-  font-weight: bold;
+const Logocontainer = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+`;
+
+const Logoicon = styled.img`
+width: 30px; /* 텍스트 크기(30px)에 맞춰 조정 */
+height: 30px;
+margin: 45px 0 5px 50px; /* Logotext padding에 맞춰 정렬 */
+margin-right: 0em;
+`;
+
+const Logotext = styled.h1`
+  font-family: 'YeongdoBold';
+  align-self: flex-start;
+  color: #FFFFFF;
+  font-size: 30px;
+  padding: 45px 15px 5px 10px; 
+  margin-top:-4px;
+
   @media (max-width: 768px) {
     font-size: 30px;
   }
+
   @media (max-width: 480px) {
-    font-size: 24px;
+    font-size: 30px;
   }
 `;
 
@@ -37,10 +64,14 @@ const GrayBox = styled.div`
   margin-top: 60px;
   margin-bottom: 30px;
   padding: 20px;
-  width: 35%;
+  width: 80%;
   height: 80vh;
   overflow-y: auto;
   border-radius: 12px;
+
+  border: 4px solid #7E7E7E;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // 살짝 그림자
 
   /* 스크롤바 스타일 */
   &::-webkit-scrollbar {
@@ -215,9 +246,10 @@ function Manage() {
     
   return (
     <PageWrapper>
-      <Header>
-        <LogoText>LOGOTEXT</LogoText>
-      </Header>
+      <Logocontainer>
+        <Logoicon src={Link} alt="링크 아이콘 이미지"></Logoicon>
+        <Logotext>손말이음</Logotext>
+        </Logocontainer>
 
       <GrayBox>
         <TopWrapper>

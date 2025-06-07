@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
+import Link from "../assets/imgs/link.png"; 
 
 const socket = io('http://localhost:3002');
 
@@ -9,26 +10,51 @@ const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 30px;
-`;
+  background-color: #273A96;
 
-const Header = styled.header`
-  border-bottom: 3px solid #D9D9D9;
-  padding: 25px;
-  text-align: center;
+  
+  /* 중앙 정렬 + 폭 제한 */
+  max-width: 480px;  // 모바일 크기 기준
+  margin: 0 auto;
   width: 100%;
+  
+  min-height: 100vh;   
+  overflow-x: hidden; // ✅ 좌우 스크롤 막기
+
+  /* ✅ 테두리와 그림자 추가 */
+  border: 2px solid lightgray;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // 살짝 그림자
 `;
 
-const LogoText = styled.h1`
-  color: gray;
-  margin-top: -35px;
-  font-size: 50px;
-  font-weight: bold;
+const Logocontainer = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+`;
+
+const Logoicon = styled.img`
+width: 30px; /* 텍스트 크기(30px)에 맞춰 조정 */
+height: 30px;
+margin: 45px 0 5px 50px; /* Logotext padding에 맞춰 정렬 */
+margin-right: 0em;
+`;
+
+const Logotext = styled.h1`
+  font-family: 'YeongdoBold';
+  align-self: flex-start;
+  color: #FFFFFF;
+  font-size: 30px;
+  padding: 45px 15px 5px 10px; 
+  margin-top:-4px;
+
   @media (max-width: 768px) {
     font-size: 30px;
   }
+
   @media (max-width: 480px) {
-    font-size: 24px;
+    font-size: 30px;
   }
 `;
 
@@ -49,7 +75,8 @@ const TextBox = styled.div`
   border: 2px solid #ccc;
   border-radius: 10px;
   padding: 15px;
-  margin-top: 20px;
+  margin-top: 10px;
+  margin-bottom: -10px;
   font-size: 18px;
   color: #333;
   text-align: center;
@@ -63,7 +90,7 @@ const RoundButton = styled.button`
   font-size: 25px;
   border: none;
   border-radius: 50%;
-  margin-top: 30px;
+  margin-top: 15px;
   cursor: pointer;
   &:hover {
     background-color: #c02727;
@@ -79,14 +106,14 @@ const ButtonWrapper = styled.div`
 const ButtonGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 5px;
 `;
 
 const SmallButton = styled.button`
   padding: 15px 10px;
   background-color: #BEBEBE;
-  color: white;
-  font-size: 16px;
+  color: black;
+  font-size: 18px;
   border: none;
   border-radius: 10px;
   cursor: pointer;
@@ -97,12 +124,12 @@ const SmallButton = styled.button`
 `;
 
 const WideButton = styled.button`
-  margin-top: 10px;
+  margin-top: 5px;
   width: 100%;
   padding: 15px;
   background-color: #BEBEBE;
-  color: white;
-  font-size: 16px;
+  color: black;
+  font-size: 18px;
   border: none;
   border-radius: 10px;
   cursor: pointer;
@@ -111,7 +138,21 @@ const WideButton = styled.button`
     background-color: #B3B3B3 ;
   }
 `;
+const StatusIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+  gap: 8px;
+  font-size:20px;
+  color: black;
+`;
 
+const Circle = styled.div`
+  width: 12px;
+  height: 12px;
+  background-color: ${props => props.online ? 'green' : 'red'};
+  border-radius: 50%;
+`;
 
 function Mancam() {
   const navigate = useNavigate();
@@ -122,6 +163,8 @@ function Mancam() {
   const remoteStreamRef = useRef(null);
   const [gifUrl, setGifUrl] = useState(null);
   const [debug, setDebug] = useState('초기화 중...');
+  const [modelResult, setModelResult] = useState(''); // 수화 인식 결과 저장용
+
 
   const roomId = 'default-room';
 
@@ -319,9 +362,10 @@ function Mancam() {
 
   return (
     <PageWrapper>
-      <Header>
-        <LogoText>LOGOTEXT</LogoText>
-      </Header>
+      <Logocontainer>
+        <Logoicon src={Link} alt="링크 아이콘 이미지"></Logoicon>
+        <Logotext>손말이음</Logotext>
+        </Logocontainer>
 
       <WebcamBox>
         <video
@@ -332,11 +376,12 @@ function Mancam() {
         />
       </WebcamBox>
 
-      <TextBox>
-        {isConnected ? "사용자와 연결되었습니다!" : "사용자 연결 대기 중..."}
-      </TextBox>
-
-      <TextBox>여기에 사용자의 수화를 인식한 텍스트가 나와요.</TextBox>
+      <StatusIndicator>
+        <Circle online={isConnected} />
+        <span>{isConnected ? '사용자와 연결되었습니다' : '사용자 연결 대기 중...'}</span>
+      </StatusIndicator>
+      
+      <TextBox> {modelResult ? modelResult : '여기에 사용자의 수화를 인식한 텍스트가 나와요.'}</TextBox>
 
       {gifUrl && (
         <div style={{ marginTop: '20px' }}>
