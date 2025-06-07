@@ -94,7 +94,7 @@ const Stationimg = styled.img`
 
 const WhiteBox = styled.div`
   width: 100%;
-  height:74vh;
+  height:75vh;
   background-color: white;
   display: flex;
   flex-direction: column;
@@ -431,6 +431,7 @@ function Main() {
   const OpenCam = () => {
     navigate('/cam', { state: { stationName: selectedStation } });
   };
+
   const containerVariants = {
     initial: {},
     animate: {
