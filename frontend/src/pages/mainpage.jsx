@@ -5,7 +5,7 @@ import subway from "../assets/imgs/subway.png";
 import axios from 'axios';
 import { isAuthenticated } from '../utils/auth';
 import Link from "../assets/imgs/link.png"; 
-import Station from "../assets/imgs/station.png";
+import Location from "../assets/imgs/location.png";
 import { motion , AnimatePresence } from 'framer-motion';
 
 // 호선별 색상 매핑
@@ -74,19 +74,21 @@ const Logotext = styled.h1`
 `;
 
 const Stationimg = styled.img`
-  margin-top:-30px;
-  margin-left:30vh;
-  margin bottom:-20px;
 
-  width: 45%;
+  margin-left:30vh;
+  margin-top:-20px;
+  margin-bottom:18px;
+
+  width: 35%;
   height: auto;
 
   @media (max-width: 480px) {
-    width: 45%;
+    width: 35%;
     height: auto;
-    margin-right:-81px;
+    margin-right:-85px;
+    margin-top:-10px;
+    margin-bottom:20px;
     margin-left:27vh;
-    margin bottom:-20px;
   }
 `;
 
@@ -452,7 +454,7 @@ function Main() {
   // 자식 애니메이션 (아래에서 위로 등장)
   const itemVariants = {
     initial: { opacity: 0, y: 100 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.6 } },
     exit: { opacity: 0, transition: { duration: 0.3 } },
   };
   
@@ -473,7 +475,7 @@ function Main() {
             exit="exit"
           >
             <motion.div variants={itemVariants}>
-              <Stationimg src={Station} alt="지하철역 이미지" />
+              <Stationimg src={Location} alt="위치 아이콘 이미지" />
             </motion.div>
 
             
@@ -527,7 +529,7 @@ function Main() {
               animate="visible"
               exit="exit"
             >
-              <ModalTitle>{selectedStation} 역의 역무원...☎</ModalTitle>
+              <ModalTitle>{selectedStation} 역의 역무원 ☎</ModalTitle>
               <OpenButton onClick={OpenCam}>✆</OpenButton>
               <CloseButton onClick={closeModal}>✆</CloseButton>
             </SlideUpModal>
