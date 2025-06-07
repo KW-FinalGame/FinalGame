@@ -7,6 +7,7 @@ import io from 'socket.io-client';
 import { isAuthenticated } from '../utils/auth';
 import Modal from 'react-modal';
 import Link from "../assets/imgs/link.png"; 
+import { motion , AnimatePresence } from 'framer-motion';
 
 const socket = io('http://localhost:3002');
 
@@ -69,13 +70,12 @@ const WebcamBox = styled.div`
   max-width: 500px;
   aspect-ratio: 4 / 3;
   background: black;
-  border-radius: 15px;
+  border-radius: 20px;
   overflow: hidden;
 
   
   /* ✅ 테두리와 그림자 추가 */
   border: 2px solid gray;
-  border-radius: 10px;
   box-shadow: 0 10px 10px rgba(0, 0, 0, 0.2); // 살짝 그림자
 `;
 
@@ -84,7 +84,7 @@ const TextBox = styled.div`
   max-width: 500px;
   margin-top: 50px;
   font-size: 30px;
-  color: lightgray;
+  color: black;
   text-align: center;
 `;
 const TextBox2 = styled.div`
@@ -121,7 +121,7 @@ const StatusIndicator = styled.div`
   margin-top: 20px;
   gap: 8px;
   font-size:20px;
-  color: #ffffff;
+  color: black;
 `;
 
 const Circle = styled.div`
@@ -131,6 +131,42 @@ const Circle = styled.div`
   border-radius: 50%;
 `;
 
+
+const SlideUpModal = styled(motion.div)`
+  width: 95%;
+  height:80vh;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  margin-top:5vh;
+
+  
+  /* 위쪽 모서리에만 둥근 처리 */
+  border-radius: 40px;
+
+  
+  /* ✅ 테두리와 그림자 추가 */
+  border: 3px solid lightgray;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2); // 살짝 그림자
+`;
+const SlideUpModal2 = styled(motion.div)`
+  background-color: white;
+  padding: 30px 20px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  width: 80%;
+  max-width: 470px;
+  text-align: center;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 480px) {
+    width: 98%;
+  max-width: 480px;
+
+  }
+`;
 function Cam() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -337,8 +373,15 @@ function Cam() {
   const handleVideoEnded = () => {
     setShowVideoModal(false);
     setVideoUrl('');
-  };
+  };  
 
+ 
+  const slideUpVariants = {
+    hidden: { y: "100%" },
+    visible: { y: 0, transition: { type: "spring", stiffness: 30 } },
+    exit: { y: "100%", transition: { duration: 0.3 } },
+  };
+  
   return (
     <PageWrapper>
       <Logocontainer>
@@ -346,6 +389,14 @@ function Cam() {
         <Logotext>손말이음</Logotext>
         </Logocontainer>
       
+        <AnimatePresence>
+
+      <SlideUpModal
+              variants={slideUpVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
       <TextBox>
         <strong>{stationName}</strong> 의 역무원
       </TextBox>
@@ -398,6 +449,9 @@ function Cam() {
       </TextBox2>
 
       <RoundButton onClick={goBackToMain}>✆</RoundButton>
+      </SlideUpModal>
+      
+      </AnimatePresence>
     </PageWrapper>
   );
 }
