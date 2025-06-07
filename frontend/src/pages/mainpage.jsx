@@ -6,7 +6,7 @@ import axios from 'axios';
 import { isAuthenticated } from '../utils/auth';
 import Link from "../assets/imgs/link.png"; 
 import Station from "../assets/imgs/station.png";
-import { motion } from 'framer-motion';
+import { motion , AnimatePresence } from 'framer-motion';
 
 // 호선별 색상 매핑
 const lineColors = {
@@ -296,17 +296,31 @@ const StationName = styled.div`
 
 const ModalBackdrop = styled.div`
   position: fixed;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
   display: flex;
   justify-content: center;
-  align-items: center;
-  z-index: 999;
+  align-items: flex-end; /* 아래에서부터 정렬 */
 `;
 
+const SlideUpModal = styled(motion.div)`
+  background-color: white;
+  padding: 30px 20px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  width: 80%;
+  max-width: 470px;
+  text-align: center;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 480px) {
+    width: 98%;
+  max-width: 480px;
+
+  }
+`;
 const Modal = styled.div`
   background-color: white;
   padding: 30px;
@@ -427,6 +441,13 @@ function Main() {
       transition: { duration: 0.3 },
     },
   };
+
+  const slideUpVariants = {
+    hidden: { y: "100%" },
+    visible: { y: 0, transition: { type: "spring", stiffness: 100 } },
+    exit: { y: "100%", transition: { duration: 0.3 } },
+  };
+  
   
   // 자식 애니메이션 (아래에서 위로 등장)
   const itemVariants = {
@@ -497,15 +518,23 @@ function Main() {
 </motion.div>
 
       {/* 모달 창 */}
-      {selectedStation && (
-        <ModalBackdrop>
-          <Modal>
-            <ModalTitle>{selectedStation} 역의 역무원...☎</ModalTitle>
-            <OpenButton onClick={OpenCam}>✆</OpenButton>
-            <CloseButton onClick={closeModal}>✆</CloseButton>
-          </Modal>
-        </ModalBackdrop>
-      )}
+      <AnimatePresence>
+        {selectedStation && (
+          <ModalBackdrop>
+            <SlideUpModal
+              variants={slideUpVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <ModalTitle>{selectedStation} 역의 역무원...☎</ModalTitle>
+              <OpenButton onClick={OpenCam}>✆</OpenButton>
+              <CloseButton onClick={closeModal}>✆</CloseButton>
+            </SlideUpModal>
+          </ModalBackdrop>
+        )}
+      </AnimatePresence>
+
     </PageWrapper>
   );
 }
