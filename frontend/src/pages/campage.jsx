@@ -87,17 +87,24 @@ const TextBox = styled.div`
   color: black;
   text-align: center;
 `;
+
+//수화 모델 번역 결과 창
 const TextBox2 = styled.div`
   width: 80%;
   max-width: 500px;
   margin-top: 30px;
-  font-size: 25px;
+  font-size: 20px;
   color: blalck;
   text-align: center;
   background-color: #f0f0f0;
   border: 2px solid #ccc;
   border-radius: 10px;
   padding: 15px;
+
+  
+  max-height: 150px;         // ✅ 높이 제한
+  overflow-y: auto;          // ✅ 세로 스크롤
+  white-space: pre-wrap;     // ✅ 줄바꿈 유지
 `;
 
 const RoundButton = styled.button`
@@ -151,22 +158,7 @@ const SlideUpModal = styled(motion.div)`
   border: 3px solid lightgray;
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2); // 살짝 그림자
 `;
-const SlideUpModal2 = styled(motion.div)`
-  background-color: white;
-  padding: 30px 20px;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  width: 80%;
-  max-width: 470px;
-  text-align: center;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 
-  @media (max-width: 480px) {
-    width: 98%;
-  max-width: 480px;
-
-  }
-`;
 function Cam() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -180,6 +172,8 @@ function Cam() {
   const [videoUrl, setVideoUrl] = useState('');
   const [connected, setConnected] = useState(false);
   const previousStatusRef = useRef(false);
+  const [modelResult, setModelResult] = useState(''); // 수화 인식 결과 저장용
+
 
   useEffect(() => {
     console.log("[Cam] 컴포넌트 마운트됨");
@@ -445,8 +439,9 @@ function Cam() {
       </StatusIndicator>
 
       <TextBox2>
-        여기에 사용자의 수화를 인식한 텍스트가 나와요.
+        {modelResult ? modelResult : '번역 결과를 기다리는 중...'}
       </TextBox2>
+
 
       <RoundButton onClick={goBackToMain}>✆</RoundButton>
       </SlideUpModal>
