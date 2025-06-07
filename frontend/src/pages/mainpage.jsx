@@ -155,7 +155,7 @@ const GrayBoxWrapper = styled.div`
 const GrayBox = styled.div`
 position: relative; /* 세로줄의 기준이 되는 relative 위치 */
   background-color: #f0f0f0;
-  width: 90%;
+  width: 45vh;
   height: 55vh;
   border-radius: 15px;
   border: 1.5px solid #ccc;
@@ -167,7 +167,7 @@ position: relative; /* 세로줄의 기준이 되는 relative 위치 */
   overflow: hidden;
 
   @media (max-width: 480px) {
-    width: 90%;
+    width: 40vh;
     padding: 15px 15px 0px 0px;
   }
 `;
@@ -488,29 +488,45 @@ function Main() {
 
       <GrayBoxWrapper>
       <GrayBox>
-        <VerticalLine />
+      {stations.length > 0 && <VerticalLine />}
         <StationList>
-          
-          {stations.map((station, index) => {
-            const lineNumber = parseInt(station.line.toString().match(/\d+/)?.[0], 10);
-            return (
-              <StationItem key={index} onClick={() => handleStationClick(station.name)}>
-                <LineCircle line={lineNumber}>{lineNumber}</LineCircle>
+          {stations.length === 0 ? (
+            <div 
+            style={{
+              width: '100%',
+              textAlign: 'center',
+              padding: '1rem',
+              fontSize: '1.6rem', 
+              fontWeight: '500',
+              color: '#555',
+              marginTop: '7rem',
+            }}>
+              현재 위치를 <br />불러오는 중입니다...📍
+            </div>
+          ) : (
+            stations.map((station, index) => {
+              const lineNumber = parseInt(station.line.toString().match(/\d+/)?.[0], 10);
+              return (
+                <StationItem key={index} onClick={() => handleStationClick(station.name)}>
+                  <LineCircle line={lineNumber}>{lineNumber}</LineCircle>
 
-                <StationTextWrapper>
-                  <LineLabel>{lineNumber}호선</LineLabel>
-                  <StationName>{station.name}</StationName>
-                </StationTextWrapper>
-                <DistanceText>
-                    {typeof station.distance_km === "number" ? `📍${station.distance_km.toFixed(2)}km` : ""}
+                  <StationTextWrapper>
+                    <LineLabel>{lineNumber}호선</LineLabel>
+                    <StationName>{station.name}</StationName>
+                  </StationTextWrapper>
+
+                  <DistanceText>
+                    {typeof station.distance_km === "number"
+                      ? `📍${station.distance_km.toFixed(2)}km`
+                      : ""}
                   </DistanceText>
-
-                  </StationItem>
-
-            );
-          })}
+                </StationItem>
+              );
+            })
+          )}
         </StationList>
       </GrayBox>
+
 
 
 
