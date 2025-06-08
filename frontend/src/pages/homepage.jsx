@@ -5,94 +5,161 @@ import styled from 'styled-components';
 import { Button } from 'react-bootstrap';
 import axios from 'axios';
 import Webcam from 'react-webcam';
-import subway from "../assets/imgs/subwayman2.png"; 
-import logoImage from "../assets/imgs/logoImage.png";
+import linklogo from "../assets/imgs/logo_link.png"; 
 
-
-// ===== Styled Components =====
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  align-items: center;
+
+  
+  /* 중앙 정렬 + 폭 제한 */
+  max-width: 480px;  // 모바일 크기 기준
+  margin: 0 auto;
+  width: 100%;
+  height: 100vh;   
+  
+  
+  /* ✅ 테두리와 그림자 추가 */
+  border: 2px solid lightgray;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // 살짝 그림자
 `;
 
-const Header = styled.header`
-  height: 120px;
-  border-bottom: 3px solid #D9D9D9;
-  text-align: center;
-  padding: 0;
+const LogoBlock = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const LogoTextTop = styled.h1`
+  font-family: 'YeongdoBold';
+  align-self: flex-start;
+  color: #273A96;
+  font-size: 70px;
+  font-weight: bold;
+  margin-top: 15vh; /* 🔄 뷰포트 높이의 20% */
+  margin-left:80px;
+  margin-bottom: 0px;
 
   @media (max-width: 768px) {
-    height: 90px;
+    font-size: 50px;
   }
 
   @media (max-width: 480px) {
-    height: 110px;
+    margin-top: 15vh; /* 🔄 뷰포트 높이의 20% */
+    margin-left:40px;
+    font-size: 60px;
   }
-`;
-
-
-const LogoImage = styled.img`
-  height: 100%;
-  padding:10px;
-  object-fit: contain;
-`;
-
-
-
-const ImageWrapper = styled.div`
-  text-align: center;
-  margin-top: 30px;
 `;
 
 const StyledImage = styled.img`
-  width: 550px;
+  width: 60%;
   height: auto;
-  border-radius: 10px;
-  margin-left:130px;
-  margin-bottom:-30px;
+
+  @media (max-width: 480px) {
+    width: 75%;
+    height: auto;
+  }
+`;
+
+const LogoTextBottom = styled.h1`
+  font-family: 'YeongdoBold';
+  align-self: flex-end;
+  color: #273A96;
+  font-size: 70px;
+  font-weight: bold;
+  margin-right:80px;
 
   @media (max-width: 768px) {
-    width: 80%;
-    margin-left:130px;
-    margin-bottom:-30px;
+    font-size: 50px;
   }
+
   @media (max-width: 480px) {
-    width: 100%;
-    margin-top:50px;
-    margin-left:0px;
-    margin-bottom:-30px;
+    font-size: 60px;
+    margin-right:40px;
   }
 `;
+
+const InfoText = styled.h1`
+  color: gray;
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 30px;
+  width: 70%;
+  max-width: 480px;
+
+  @media (max-width: 768px) {
+    font-size: 24px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 15px;
+    width: 70%;
+  }
+`;
+
 
 const ButtonWrapper = styled.div`
-  text-align: center;
-  margin-top: 40px;
-  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 50px;
+  gap: 12px; // 버튼 사이 여백
 `;
 
+
 const CustomButton = styled(Button)`
-  background-color: #545454 !important;
-  margin-top: -20px;
+  background-color: #273A96 !important;
   border: none !important;
-  padding: 15px 50px;
-  font-size: 30px;
+  font-size: 24px;
   font-weight: bold;
   color: white !important;
   border-radius: 15px;
+  outline: none !important;
+  box-shadow: none !important;
+  
+  
+  width: 100%;        /* ✅ 부모(PageWrapper) 너비만큼 */
+  max-width: 100%; 
+  padding: 10px 110px;
+
   &:hover {
-    background-color: #CFCFCF !important;
+    background-color: #687AD1 !important;
   }
 
-  @media (max-width: 768px) {
-    padding: 15px 40px;
-    font-size: 25px;
-  }
   @media (max-width: 480px) {
-    padding: 14px 40px;
-    font-size: 30px;
+    width: 100%;
+    font-size: 22px;
   }
 `;
+
+const CustomButton2 = styled(Button)`
+background-color: gray !important;
+border: none !important;
+font-size: 24px;
+font-weight: bold;
+color: white !important;
+border-radius: 15px;
+padding: 10px 110px;
+
+width: 100%;        /* ✅ 부모(PageWrapper) 너비만큼 */
+max-width: 100%; 
+
+&:hover {
+  background-color: #CFCFCF !important;
+}
+
+@media (max-width: 480px) {
+  width: 100%;
+  font-size: 22px;
+}
+`;
+
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -136,7 +203,7 @@ const Input = styled.input`
 `;
 
 const ConfirmButton = styled.button`
-  background-color: #545454;
+  background-color: #273A96;
   color: white;
   font-size: 16px;
   font-weight: bold;
@@ -226,7 +293,7 @@ function Home() {
       localStorage.setItem('user', JSON.stringify({ username: loginId, role }));
   
       setShowModal(false);
-      navigate(role === 'admin' ? '/manage' : '/main');
+      navigate(role === 'admin' ? '/manage' : '/start');
     } catch (error) {
       console.error('로그인 실패:', error);
       alert('로그인에 실패했습니다.');
@@ -254,18 +321,25 @@ function Home() {
 
   return (
     <PageWrapper>
-      <Header>
-      <LogoImage src={logoImage} alt="로고 이미지" />
-    </Header>
+    <LogoBlock>
+      <LogoTextTop>손말</LogoTextTop>
+      <StyledImage src={linklogo} alt="로고 이미지" />
+      <LogoTextBottom>이음</LogoTextBottom>
+    </LogoBlock>
 
+    <InfoText>
+       지하철 수화 민원 서비스는 청각·언어장애인이 실시간 수화 인식 기술을 통해 역무원과 원활하게 소통할 수 있도록 지원하는 민원 시스템입니다.
+    </InfoText>
 
-      <ImageWrapper>
-        <StyledImage src={subway} alt="지하철 이미지" />
-      </ImageWrapper>
+    <ButtonWrapper>
+      <CustomButton onClick={() => { setIsLoginMode(true); setShowModal(true); }}>
+        로그인
+      </CustomButton>
+      <CustomButton2 onClick={() => { setIsLoginMode(false); setShowModal(true); }}>
+        회원가입
+      </CustomButton2>
 
-      <ButtonWrapper>
-        <CustomButton onClick={() => { setIsLoginMode(true); setShowModal(true); }}>로그인</CustomButton>
-      </ButtonWrapper>
+    </ButtonWrapper>
 
       {/* 로그인/회원가입 모달 */}
       <ModalOverlay show={showModal} onClick={() => setShowModal(false)}>
