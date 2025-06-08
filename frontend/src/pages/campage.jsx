@@ -65,6 +65,7 @@ const Logotext = styled.h1`
 
 
 const WebcamBox = styled.div`
+  position: relative; // ✅ 추가!
   margin-top: 40px;
   width: 80%;
   max-width: 500px;
@@ -166,6 +167,7 @@ function Cam() {
   const roomId = location.state?.roomId || 'default-room';
 
   const webcamRef = useRef(null); // react-webcam ref
+  const canvasRef = useRef(null);
   const peerRef = useRef(null);
   const [isManConnected, setManagerOnline] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
@@ -293,6 +295,82 @@ function Cam() {
       peerRef.current = null;
     };
   }, [roomId]);
+
+  useEffect(() => {
+    socket.on('prediction', (result) => {
+      console.log('[prediction] 모델 예측 결과:', result);
+      setModelResult(result);
+    });
+  
+    return () => {
+      socket.off('prediction');
+    };
+  }, []);
+  
+  
+  const [landmarkNow, setLandmarkNow] = useState(null); // 최신 좌표 저장용
+  
+  useEffect(() => {
+    const hands = new window.Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    });
+    
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7,
+    });
+    
+    hands.onResults((results) => {
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+        const flatCoords = landmarks.flatMap((pt) => [pt.x, pt.y, pt.z]);
+        setLandmarkNow(flatCoords);
+    
+        // ✅ 손 랜드마크 그리기 예시 (선택)
+        const canvasCtx = canvasRef.current?.getContext("2d");
+        if (canvasCtx && webcamRef.current?.video) {
+          canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+          window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, { color: '#00FF00' });
+          window.drawLandmarks(canvasCtx, landmarks, { color: '#FF0000' });
+        }
+      }
+    });
+    
+    const camera = new window.Camera(webcamRef.current.video, {
+      onFrame: async () => {
+        await hands.send({ image: webcamRef.current.video });
+      },
+      width: 640,
+      height: 480,
+    });
+    
+    camera.start();
+    
+  
+    return () => camera.stop();
+  }, []);
+
+  //예측용 useEffect
+  useEffect(() => {
+    const sequenceBuffer = [];
+  
+    const intervalId = setInterval(() => {
+      // landmarkNow는 Mediapipe로 실시간 추출된 (63,) 배열이어야 함
+      if (!landmarkNow || landmarkNow.length !== 63) return;
+  
+      sequenceBuffer.push(landmarkNow);
+  
+      if (sequenceBuffer.length === 30) {
+        socket.emit('sequence', sequenceBuffer);  // ✅ 백엔드로 emit
+        sequenceBuffer.length = 0; // 버퍼 초기화
+      }
+    }, 33); // 30fps ≒ 1000ms / 30
+  
+    return () => clearInterval(intervalId);
+  }, [landmarkNow]);
+  
   
   const initializeWebRTC = async () => {
     try {
@@ -405,6 +483,17 @@ function Cam() {
           screenshotFormat="image/jpeg"
           videoConstraints={{ facingMode: 'user' }}
           style={{ width: '100%', height: '100%' }}
+        />
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 2
+          }}
         />
       </WebcamBox>
 

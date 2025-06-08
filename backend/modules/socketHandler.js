@@ -1,3 +1,4 @@
+const axios = require('axios');
 const { Server } = require("socket.io");
 const SignGif = require('../models/signgif'); // gif DB
 
@@ -113,6 +114,26 @@ const socketHandler = (server) => {
         io.to(roomId).emit('manager-status', { connected: stillManager });
         io.to(roomId).emit('room-members', members);
       });
+
+      // 👉 수어 시퀀스 예측 요청 수신
+    socket.on('sequence', async (sequenceData) => {
+      try {
+        // Flask 서버로 POST
+        const res = await axios.post('http://localhost:5000/predict', {
+          sequence: sequenceData
+        });
+
+        const result = res.data.result;
+        console.log('✅ 예측 결과:', result);
+
+        // 프론트로 전송
+        socket.emit('prediction', result);
+      } catch (err) {
+        console.error('❌ 예측 중 에러 발생:', err.message);
+        console.error(err);
+        socket.emit('prediction', "예측 실패");
+      }
+    });
       
     });
     
