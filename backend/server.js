@@ -1,4 +1,5 @@
 require('dotenv').config(); // 환경변수 로드
+const axios = require('axios');
 const express = require('express');
 const app = express();
 const path = require('path');
@@ -62,8 +63,20 @@ app.use('/uploads', express.static('uploads')); // 업로드 정적 파일 추�
 // socketHandler에 http server 전달
 socketHandler(server);
 
+// ✅ Flask 서버 확인 (환경변수로 주소 관리)
+(async () => {
+  try {
+    await axios.post(`${process.env.FLASK_BASE_URL}/predict`, {
+      sequence: Array(30).fill(Array(63).fill(0)) // 테스트 입력
+    });
+    console.log("✅ Flask 서버 연결 확인됨");
+  } catch (e) {
+    console.error("❌ Flask 서버 연결 실패:", e.message);
+  }
+})();
+
 // 서버 실행
-const PORT = 3002;
-server.listen(PORT, '0.0.0.0', () => { // server 객체로 변경
+const PORT = process.env.NODE_PORT || 3002;
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
 });
