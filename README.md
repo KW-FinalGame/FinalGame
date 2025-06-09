@@ -8,6 +8,7 @@
 
 ## 초기 설치 방법
 <strong> 1. cd backend 에서 npm install 그리고 pip install -r requirements.txt </string>
+<br>
 <strong> 2. cd frontend 하고 npm install </string>
 
 ## 실행방법
