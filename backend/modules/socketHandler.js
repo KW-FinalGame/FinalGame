@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { Server } = require("socket.io");
-const SignGif = require('../models/signgif'); // gif DB
+const SignGif = require('../models/signgif');
 
 const socketHandler = (server) => {
   const io = new Server(server, {
@@ -12,42 +12,35 @@ const socketHandler = (server) => {
   });
 
   io.on('connection', (socket) => {
-    console.log("클라이언트 연결됨:", socket.id);
+    console.log("✅ 클라이언트 연결됨:", socket.id);
 
     socket.on('join-room', async ({ role, roomId }) => {
       const clients = io.sockets.adapter.rooms.get(roomId);
       const numClients = clients ? clients.size : 0;
-    
+
       if (numClients >= 2) {
-        console.log('방이 가득 찼습니다.');
+        console.log('❌ 방이 가득 찼습니다.');
         socket.emit('room-full');
         return;
       }
-    
+
       socket.join(roomId);
       socket.role = role;
       socket.roomId = roomId;
-    
-      console.log(`${role} 입장: ${socket.id} (room: ${roomId})`);
-    
+
+      console.log(`✅ ${role} 입장: ${socket.id} (room: ${roomId})`);
+
       const roomSet = io.sockets.adapter.rooms.get(roomId);
       const members = roomSet ? Array.from(roomSet) : [];
-    
+
       const isManagerConnected = members.some(
         (id) => io.sockets.sockets.get(id)?.role === 'manager'
       );
-    
+
       io.to(roomId).emit('room-members', members);
       io.to(roomId).emit('manager-status', { connected: isManagerConnected });
-    
-      io.to(roomId).emit('room-info', {
-        roomId,
-        members,
-        isManagerConnected,
-      });
+      io.to(roomId).emit('room-info', { roomId, members, isManagerConnected });
 
-
-      // WebRTC 이벤트 핸들링
       socket.on('offer', (offer) => {
         socket.to(roomId).emit('offer', offer);
       });
@@ -61,7 +54,7 @@ const socketHandler = (server) => {
       });
 
       socket.on('trigger-play-db-video', (url) => {
-        io.to(roomId).emit('play-video-url', url); // 이벤트명 통일
+        io.to(roomId).emit('play-video-url', url);
       });
 
       socket.on('trigger-gif', async (keyword) => {
@@ -75,68 +68,72 @@ const socketHandler = (server) => {
               }
             }
           } else {
-            socket.emit('error', `해당 키워드(${keyword})에 대한 GIF가 없습니다.`);
+            socket.emit('error', `❌ 해당 키워드(${keyword})에 대한 GIF가 없습니다.`);
           }
         } catch (e) {
+          console.error('❌ GIF 처리 중 오류 발생:', e);
           socket.emit('error', 'GIF 처리 중 오류 발생');
         }
       });
 
       socket.on('disconnect', () => {
-        console.log(`${role} 퇴장: ${socket.id} (room: ${roomId})`);
-    
+        console.log(`❌ ${role} 퇴장: ${socket.id} (room: ${roomId})`);
+
         const room = io.sockets.adapter.rooms.get(roomId);
         const members = room ? Array.from(room) : [];
-    
+
         const stillManager = members.some(
           (id) => io.sockets.sockets.get(id)?.role === 'manager'
         );
-    
+
         io.to(roomId).emit('manager-status', { connected: stillManager });
         io.to(roomId).emit('room-members', members);
       });
-      
+
       socket.on('leave-room', () => {
-        console.log(`${socket.role} 나감: ${socket.id} (room: ${roomId})`);
-      
+        console.log(`❌ ${socket.role} 나감: ${socket.id} (room: ${roomId})`);
         socket.leave(roomId);
-      
-        // 현재 룸 멤버 조회
+
         const room = io.sockets.adapter.rooms.get(roomId);
         const members = room ? Array.from(room) : [];
-      
-        // 룸에 매니저가 여전히 접속해있는지 확인
+
         const stillManager = members.some(
           (id) => io.sockets.sockets.get(id)?.role === 'manager'
         );
-      
-        // 룸 내에 매니저 접속 상태 및 멤버 리스트 실시간 전송
+
         io.to(roomId).emit('manager-status', { connected: stillManager });
         io.to(roomId).emit('room-members', members);
       });
 
-      // 👉 수어 시퀀스 예측 요청 수신
-    socket.on('sequence', async (sequenceData) => {
-      try {
-        // Flask 서버로 POST
-        const res = await axios.post('http://localhost:5000/predict', {
-          sequence: sequenceData
-        });
+      // ✅ 수어 시퀀스 예측 처리
+      socket.on('sequence', async (sequenceData) => {
+        console.log('📤 수신된 시퀀스 데이터:', sequenceData);
 
-        const result = res.data.result;
-        console.log('✅ 예측 결과:', result);
+        try {
+          const res = await axios.post('http://127.0.0.1:5000/predict', {
+            sequence: sequenceData
+          });                    
 
-        // 프론트로 전송
-        socket.emit('prediction', result);
-      } catch (err) {
-        console.error('❌ 예측 중 에러 발생:', err.message);
-        console.error(err);
-        socket.emit('prediction', "예측 실패");
-      }
+          console.log('📥 Flask 응답:', res.data);
+
+          socket.emit('prediction', res.data.result);
+        } catch (err) {
+          console.error('❌ 예측 중 에러 발생:', err);
+
+          if (err.response) {
+            console.error('📛 응답 상태:', err.response.status);
+            console.error('📛 응답 데이터:', err.response.data);
+          } else if (err.request) {
+            console.error('📛 요청은 전송되었으나 응답 없음');
+            console.error(err.request);
+          } else {
+            console.error('📛 설정 중 에러:', err.message);
+          }
+
+          socket.emit('prediction', "예측 실패");
+        }
+      });
     });
-      
-    });
-    
   });
 };
 
