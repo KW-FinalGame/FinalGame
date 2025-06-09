@@ -6,6 +6,10 @@
 ## 목표
 청각·언어장애인을 위한 실시간 수어 기반 지하철 민원 처리 웹 플랫폼을 개발합니다. 사용자의 손동작을 인식하여 자연어로 번역하고, 이를 역무원에게 전달함으로써 정확하고 빠른 실시간 의사소통을 지원합니다. 수어 패턴은 긴급 상황, 길 안내 등 지하철 이용 시 자주 발생하는 상황을 기반으로 설계됩니다.
 
+## 초기 설치 방법
+<strong> 1. cd backend 에서 npm install 그리고 pip install -r requirements.txt </string>
+<strong> 2. cd frontend 하고 npm install </string>
+
 ## 실행방법
 <strong> 1. FinalGame/ 에서 npm start </string>
    
