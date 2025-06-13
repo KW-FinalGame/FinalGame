@@ -108,18 +108,20 @@ const socketHandler = (server) => {
       // ✅ 수어 시퀀스 예측 처리
       socket.on('sequence', async (sequenceData) => {
         console.log('📤 수신된 시퀀스 데이터:', sequenceData);
-
+      
         try {
           const res = await axios.post('http://127.0.0.1:5000/predict', {
             sequence: sequenceData
           });                    
-
+      
           console.log('📥 Flask 응답:', res.data);
-
-          socket.emit('prediction', res.data.result);
+      
+          // ✅ 수정: 모든 room 멤버에게 전송
+          io.to(roomId).emit('prediction', res.data.result);
+      
         } catch (err) {
           console.error('❌ 예측 중 에러 발생:', err);
-
+      
           if (err.response) {
             console.error('📛 응답 상태:', err.response.status);
             console.error('📛 응답 데이터:', err.response.data);
@@ -129,10 +131,10 @@ const socketHandler = (server) => {
           } else {
             console.error('📛 설정 중 에러:', err.message);
           }
-
-          socket.emit('prediction', "예측 실패");
+      
+          io.to(roomId).emit('prediction', "예측 실패"); // ✅ 에러도 전체에
         }
-      });
+      });      
     });
   });
 };
