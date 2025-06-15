@@ -106,35 +106,41 @@ const socketHandler = (server) => {
       });
 
       // ✅ 수어 시퀀스 예측 처리
-      socket.on('sequence', async (sequenceData) => {
-        console.log('📤 수신된 시퀀스 데이터:', sequenceData);
+      socket.on('sequence', async ({ sequence }) => {
+        console.log('📤 수신된 시퀀스 데이터:', sequence?.length);
       
         try {
-          const res = await axios.post('http://127.0.0.1:5000/predict', {
-            sequence: sequenceData
-          });                    
+          // 🔍 1. 트래클릿 기반 구분 (서버에서)
+          const computeTrajectoryVariance = (seq) => {
+            const diffs = [];
+            for (let i = 1; i < seq.length; i++) {
+              const diff = seq[i].map((v, j) => v - seq[i - 1][j]);
+              const norm = Math.sqrt(diff.reduce((sum, v) => sum + v * v, 0));
+              diffs.push(norm);
+            }
+            return diffs.reduce((a, b) => a + b, 0) / diffs.length;
+          };
+      
+          const trajVar = computeTrajectoryVariance(sequence);
+          const gesture_type = trajVar < 0.05 ? "static" : "dynamic";
+      
+          const postData = { gesture_type, sequence };
+          console.log(`🧠 예측 분기: ${gesture_type} (trajVar=${trajVar.toFixed(5)})`);
+      
+          const res = await axios.post('http://127.0.0.1:5000/predict', postData);
       
           console.log('📥 Flask 응답:', res.data);
-      
-          // ✅ 수정: 모든 room 멤버에게 전송
           io.to(roomId).emit('prediction', res.data.result);
       
         } catch (err) {
           console.error('❌ 예측 중 에러 발생:', err);
-      
           if (err.response) {
             console.error('📛 응답 상태:', err.response.status);
             console.error('📛 응답 데이터:', err.response.data);
-          } else if (err.request) {
-            console.error('📛 요청은 전송되었으나 응답 없음');
-            console.error(err.request);
-          } else {
-            console.error('📛 설정 중 에러:', err.message);
           }
-      
-          io.to(roomId).emit('prediction', "예측 실패"); // ✅ 에러도 전체에
+          io.to(roomId).emit('prediction', "예측 실패");
         }
-      });      
+      });            
     });
   });
 };

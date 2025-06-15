@@ -172,7 +172,7 @@ function Cam() {
   const [isManConnected, setManagerOnline] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoUrl, setVideoUrl] = useState('');
-  const [connected, setConnected] = useState(false);
+  const [, setConnected] = useState(false);
   const previousStatusRef = useRef(false);
   const [modelResult, setModelResult] = useState(''); // 수화 인식 결과 저장용
 
@@ -301,43 +301,33 @@ function Cam() {
       console.log('[prediction] 모델 예측 결과:', result);
       setModelResult(result);
     });
-  
-    return () => {
-      socket.off('prediction');
-    };
+    return () => socket.off('prediction');
   }, []);
-  
-  
-  const [landmarkNow, setLandmarkNow] = useState(null); // 최신 좌표 저장용
-  
+
+  const landmarkBuffer = useRef([]);
+  const lastFrameTime = useRef(Date.now());
+
   useEffect(() => {
     const hands = new window.Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
     });
-    
+
     hands.setOptions({
-      maxNumHands: 1,
+      maxNumHands: 2,
       modelComplexity: 1,
       minDetectionConfidence: 0.7,
       minTrackingConfidence: 0.7,
     });
-    
+
     hands.onResults((results) => {
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        const landmarks = results.multiHandLandmarks[0];
-        const flatCoords = landmarks.flatMap((pt) => [pt.x, pt.y, pt.z]);
-        setLandmarkNow(flatCoords);
-    
-        // ✅ 손 랜드마크 그리기 예시 (선택)
-        const canvasCtx = canvasRef.current?.getContext("2d");
-        if (canvasCtx && webcamRef.current?.video) {
-          canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-          window.drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS, { color: '#00FF00' });
-          window.drawLandmarks(canvasCtx, landmarks, { color: '#FF0000' });
-        }
+        landmarkBuffer.current = results.multiHandLandmarks;
+        lastFrameTime.current = Date.now();
+      } else {
+        landmarkBuffer.current = [];
       }
     });
-    
+
     const camera = new window.Camera(webcamRef.current.video, {
       onFrame: async () => {
         await hands.send({ image: webcamRef.current.video });
@@ -345,31 +335,106 @@ function Cam() {
       width: 640,
       height: 480,
     });
-    
+
     camera.start();
-    
-  
     return () => camera.stop();
   }, []);
 
-  //예측용 useEffect
   useEffect(() => {
-    const sequenceBuffer = [];
-  
-    const intervalId = setInterval(() => {
-      // landmarkNow는 Mediapipe로 실시간 추출된 (63,) 배열이어야 함
-      if (!landmarkNow || landmarkNow.length !== 63) return;
-  
-      sequenceBuffer.push(landmarkNow);
-  
-      if (sequenceBuffer.length === 30) {
-        socket.emit('sequence', sequenceBuffer);  // ✅ 백엔드로 emit
-        sequenceBuffer.length = 0; // 버퍼 초기화
+    const computeTrajectoryVar = (frames) => {
+      let sum = 0;
+      for (let i = 1; i < frames.length; i++) {
+        const prev = frames[i - 1];
+        const cur = frames[i];
+        let d = 0;
+        for (let j = 0; j < prev.length; j++) {
+          d += (cur[j] - prev[j]) ** 2;
+        }
+        sum += Math.sqrt(d);
       }
-    }, 33); // 30fps ≒ 1000ms / 30
-  
+      return sum / (frames.length - 1);
+    };
+
+    const toRelativeStatic = (frame) => {
+      const wrist = frame.slice(0, 3); // 기준점
+      const rel = [];
+      for (let i = 0; i < 42; i++) {
+        const x = frame[i * 3] - wrist[0];
+        const y = frame[i * 3 + 1] - wrist[1];
+        const z = frame[i * 3 + 2] - wrist[2];
+        rel.push(x, y, z);
+      }
+      return rel.flat(); // ✅ shape (126,)
+    };        
+
+    const toRelativeDynamic = (seq) => {
+      const reshaped = seq.map(f => {
+        const out = [];
+        for (let i = 0; i < 42; i++) {
+          out.push([f[i * 3], f[i * 3 + 1], f[i * 3 + 2]]);
+        }
+        return out;
+      });
+      return reshaped.map(frame => {
+        const wrist = frame[0];
+        const rel = frame.map(p => [p[0] - wrist[0], p[1] - wrist[1], p[2] - wrist[2]]);
+        return rel.flat();
+      });
+    };
+
+    const sequence = [];
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      if (now - lastFrameTime.current > 300) {
+        landmarkBuffer.current = [];
+        return;
+      }
+
+      if (landmarkBuffer.current.length === 0) return;
+
+      const coords = landmarkBuffer.current.map(hand => hand.flatMap(pt => [pt.x, pt.y, pt.z]));
+      while (coords.length < 2) coords.push(new Array(63).fill(0));
+      if (coords[0][0] > coords[1][0]) coords.reverse();
+      const frame = [...coords[0], ...coords[1]];
+      sequence.push(frame);
+
+      if (sequence.length === 30) {
+        const traj = computeTrajectoryVar(sequence);
+        const gesture_type = traj < 0.05 ? "static" : "dynamic";
+      
+        if (gesture_type === "static") {
+          const rel = toRelativeStatic(sequence[0]);  // (126,)
+          const padded = Array.from({ length: 30 }, () => [...rel]);  // ✅ 복제된 배열 30개
+        
+          socket.emit("sequence", {
+            gesture_type: "static",
+            sequence: padded,
+            mask: Array(42).fill(1)
+          });
+        }
+         else {
+          const relSeq = toRelativeDynamic(sequence);  // (30, 126)
+          if (relSeq.length === 30) {
+            socket.emit("sequence", {
+              gesture_type: "dynamic",
+              sequence: relSeq
+            });
+          } else {
+            console.warn("❌ 동적 제스처인데 시퀀스 길이가 30이 아님:", relSeq.length);
+          }
+        }
+      
+        sequence.length = 0;
+      }
+           
+      console.log("sequence.length:", sequence.length);
+      console.log("sequence:", sequence);
+
+    }, 33);
+
     return () => clearInterval(intervalId);
-  }, [landmarkNow]);
+  }, []);
+
   
   
   const initializeWebRTC = async () => {
