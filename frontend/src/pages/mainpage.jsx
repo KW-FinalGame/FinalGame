@@ -368,6 +368,42 @@ const CloseButton = styled.button`
   }
 `;
 
+// 글자별 bounce 애니메이션
+const BouncingText = ({ text }) => {
+  return (
+    <motion.div
+      style={{
+        width: "100%",
+        textAlign: "center",
+        marginTop: "7rem",
+        fontSize: "1.6rem",
+        fontWeight: "500",
+        color: "#555",
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        lineHeight: "2rem",
+      }}
+    >
+      {text.split("").map((char, i) => (
+        <motion.span
+          key={i}
+          style={{ display: "inline-block", margin: "0 1px" }}
+          initial={{ y: 0 }}
+          animate={{ y: [0, -6, 0] }}
+          transition={{
+            repeat: Infinity,
+            duration: 0.6,
+            delay: i * 0.1, // 한 글자씩 순차적 bounce
+          }}
+        >
+          {char === " " ? "\u00A0" : char}
+        </motion.span>
+      ))}
+    </motion.div>
+  );
+};
+
 function Main() {
   const [stations, setStations] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
@@ -491,20 +527,10 @@ function Main() {
       <GrayBox>
       {stations.length > 0 && <VerticalLine />}
         <StationList>
-          {stations.length === 0 ? (
-            <div 
-            style={{
-              width: '100%',
-              textAlign: 'center',
-              padding: '1rem',
-              fontSize: '1.6rem', 
-              fontWeight: '500',
-              color: '#555',
-              marginTop: '7rem',
-            }}>
-              현재 위치를 <br />불러오는 중입니다...📍
-            </div>
-          ) : (
+        {stations.length === 0 ? (
+  <BouncingText text="현재 위치를 불러오는 중입니다..." />
+) : (
+
             stations.map((station, index) => {
               const lineNumber = parseInt(station.line.toString().match(/\d+/)?.[0], 10);
               return (
