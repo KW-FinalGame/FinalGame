@@ -2,11 +2,11 @@
     "name": "FinalGame",
     "version": "1.0.0",
     "scripts": {
-      "start": "concurrently \"npm run flask\" \"npm run wait-and-server\" \"npm run client\"",
-      "flask": "cd backend/python && python inference_server.py",
-      "wait-and-server": "wait-on http://localhost:5000 && npm run server",
-      "server": "cd backend && node server.js",
-      "client": "cd frontend && npm start"
+        "start": "concurrently \"npm run flask\" \"npm run wait-and-server\" \"npm run client\"",
+        "flask": "cd backend/python && py inference_server.py",
+        "wait-and-server": "wait-on http://localhost:5000 && npm run server",
+        "server": "cd backend && node server.js",
+        "client": "cd frontend && npm start"
     },
     "devDependencies": {
         "concurrently": "^7.0.0",
@@ -16,6 +16,7 @@
         "@mediapipe/camera_utils": "^0.3.1675466862",
         "@mediapipe/drawing_utils": "^0.3.1675466124",
         "@mediapipe/hands": "^0.4.1675469240",
+        "axios": "^1.12.2",
         "dotenv": "^16.5.0",
         "p-limit": "^6.2.0"
     }

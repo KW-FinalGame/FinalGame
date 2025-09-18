@@ -10,9 +10,9 @@ import traceback
 app = Flask(__name__)
 CORS(app, origins="*")
 
-# 모델 경로 설정
+# 모델 경로 설정 (경로는 그대로 유지)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DYNAMIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/dynamic_gesture_model.h5')
+DYNAMIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/dynamic_gesture_model3.h5')
 STATIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/cnn_model_bothhands.keras')
 
 # 라벨 매핑
@@ -21,7 +21,11 @@ label_to_class_dynamic = {
     1: "dangerous",
     2: "careful",
     3: "hello",
-    4: "lose"
+    4: "lose",
+    5: "card",
+    6: "balance",
+    7: "deficit",
+    8: "subway"
 }
 
 label_to_class_static = {
@@ -46,14 +50,14 @@ def compute_trajectory_variance(sequence):
     norms = np.linalg.norm(diffs, axis=1)
     return np.mean(norms)
 
-# 동적 입력 변환
+# 동적 입력 변환 (절대좌표 → 상대좌표, 손목 기준)
 def relative_coordinates_dynamic(seq):
     seq = np.array(seq).reshape(30, 42, 3)
-    wrist = seq[:, 0:1, :]
+    wrist = seq[:, 0:1, :]  # 왼손 손목 좌표
     rel = seq - wrist
     return rel.reshape(30, 126)
 
-# 정적 입력 변환
+# 정적 입력 변환 (오른손은 비활성화)
 def preprocess_static_input(first_frame):
     data = np.array(first_frame).reshape(42, 3)
     wrist = data[0]
@@ -61,7 +65,8 @@ def preprocess_static_input(first_frame):
     left_hand = rel[:21]
     right_hand = rel[21:]
     combined = np.concatenate([left_hand, right_hand], axis=0)
-    mask = np.array([1]*21 + [1]*21)
+    # 오른손 마스크 0, 왼손만 활성화
+    mask = np.array([1]*21 + [0]*21, dtype=np.float32)
     return combined, mask
 
 # 예측 API
@@ -86,7 +91,7 @@ def predict():
                 return jsonify({ "error": "Dynamic model requires shape (30,126)" }), 400
 
             rel_seq = relative_coordinates_dynamic(sequence)
-            output = model_dynamic.predict(np.expand_dims(rel_seq, 0), verbose=0)
+            output = model_dynamic.predict(np.expand_dims(rel_seq, 0), verbose=0)[0]
             confidence = float(np.max(output))
             label = int(np.argmax(output))
             label_text = label_to_class_dynamic.get(label, "알 수 없음")
@@ -105,7 +110,7 @@ def predict():
             first_frame = first_frame.reshape(42, 3)
 
             static_input, mask = preprocess_static_input(first_frame)
-            output = model_static.predict([np.expand_dims(static_input, 0), np.expand_dims(mask, 0)], verbose=0)
+            output = model_static.predict([np.expand_dims(static_input, 0), np.expand_dims(mask, 0)], verbose=0)[0]
             label = int(np.argmax(output))
             result = label_to_class_static.get(label, "알 수 없음")
 
