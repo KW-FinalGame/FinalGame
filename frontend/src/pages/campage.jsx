@@ -297,12 +297,13 @@ function Cam() {
   }, [roomId]);
 
   useEffect(() => {
-    socket.on('prediction', (result) => {
-      console.log('[prediction] 모델 예측 결과:', result);
-      setModelResult(result);
-    });
-    return () => socket.off('prediction');
+  socket.on('prediction', (data) => {
+    console.log("🧠 예측 결과:", data);
+    setModelResult(data.sentence || data.label);
+  });
+  return () => socket.off('prediction');
   }, []);
+
 
   const landmarkBuffer = useRef([]);
   const lastFrameTime = useRef(Date.now());
@@ -399,31 +400,7 @@ function Cam() {
       sequence.push(frame);
 
       if (sequence.length === 30) {
-        const traj = computeTrajectoryVar(sequence);
-        const gesture_type = traj < 0.05 ? "static" : "dynamic";
-      
-        if (gesture_type === "static") {
-          const rel = toRelativeStatic(sequence[0]);  // (126,)
-          const padded = Array.from({ length: 30 }, () => [...rel]);  // ✅ 복제된 배열 30개
-        
-          socket.emit("sequence", {
-            gesture_type: "static",
-            sequence: padded,
-            mask: Array(42).fill(1)
-          });
-        }
-         else {
-          const relSeq = toRelativeDynamic(sequence);  // (30, 126)
-          if (relSeq.length === 30) {
-            socket.emit("sequence", {
-              gesture_type: "dynamic",
-              sequence: relSeq
-            });
-          } else {
-            console.warn("❌ 동적 제스처인데 시퀀스 길이가 30이 아님:", relSeq.length);
-          }
-        }
-      
+        socket.emit("sequence", { sequence });
         sequence.length = 0;
       }
            

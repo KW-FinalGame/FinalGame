@@ -11,6 +11,12 @@ const socketHandler = (server) => {
     }
   });
 
+  // ✅ Flask axios 인스턴스 (타임아웃, 환경변수 사용)
+  const flask = axios.create({
+    baseURL: process.env.FLASK_URL || 'http://127.0.0.1:5000',
+    timeout: 3000,
+  });
+
   io.on('connection', (socket) => {
     console.log("✅ 클라이언트 연결됨:", socket.id);
 
@@ -41,6 +47,7 @@ const socketHandler = (server) => {
       io.to(roomId).emit('manager-status', { connected: isManagerConnected });
       io.to(roomId).emit('room-info', { roomId, members, isManagerConnected });
 
+      // ===== WebRTC 시그널링 =====
       socket.on('offer', (offer) => {
         socket.to(roomId).emit('offer', offer);
       });
@@ -53,6 +60,7 @@ const socketHandler = (server) => {
         socket.to(roomId).emit('ice-candidate', candidate);
       });
 
+      // ===== 영상 재생 관련 =====
       socket.on('trigger-play-db-video', (url) => {
         io.to(roomId).emit('play-video-url', url);
       });
@@ -76,6 +84,7 @@ const socketHandler = (server) => {
         }
       });
 
+      // ===== 연결 종료 =====
       socket.on('disconnect', () => {
         console.log(`❌ ${role} 퇴장: ${socket.id} (room: ${roomId})`);
 
@@ -105,42 +114,52 @@ const socketHandler = (server) => {
         io.to(roomId).emit('room-members', members);
       });
 
-      // ✅ 수어 시퀀스 예측 처리
+      // ===== Flask 연동 (trajectory 및 분기 처리 포함) =====
+      let inferInFlight = false;
+
       socket.on('sequence', async ({ sequence }) => {
-        console.log('📤 수신된 시퀀스 데이터:', sequence?.length);
-      
         try {
-          // 🔍 1. 트래클릿 기반 구분 (서버에서)
-          const computeTrajectoryVariance = (seq) => {
-            const diffs = [];
-            for (let i = 1; i < seq.length; i++) {
-              const diff = seq[i].map((v, j) => v - seq[i - 1][j]);
-              const norm = Math.sqrt(diff.reduce((sum, v) => sum + v * v, 0));
-              diffs.push(norm);
-            }
-            return diffs.reduce((a, b) => a + b, 0) / diffs.length;
-          };
-      
-          const trajVar = computeTrajectoryVariance(sequence);
-          const gesture_type = trajVar < 0.05 ? "static" : "dynamic";
-      
-          const postData = { gesture_type, sequence };
-          console.log(`🧠 예측 분기: ${gesture_type} (trajVar=${trajVar.toFixed(5)})`);
-      
-          const res = await axios.post('http://127.0.0.1:5000/predict', postData);
-      
-          console.log('📥 Flask 응답:', res.data);
-          io.to(roomId).emit('prediction', res.data.result);
-      
-        } catch (err) {
-          console.error('❌ 예측 중 에러 발생:', err);
-          if (err.response) {
-            console.error('📛 응답 상태:', err.response.status);
-            console.error('📛 응답 데이터:', err.response.data);
+          if (!roomId) {
+            console.warn('⚠️ roomId 없음: sequence 무시');
+            return;
           }
-          io.to(roomId).emit('prediction', "예측 실패");
+
+          if (!Array.isArray(sequence) || sequence.length !== 30) {
+            console.warn('⚠️ sequence 길이(30) 불일치:', sequence?.length);
+            return;
+          }
+
+          const frameLen = Array.isArray(sequence[0]) ? sequence[0].length : null;
+          if (!(frameLen === 126 || frameLen === 63)) {
+            console.warn('⚠️ frame 길이(63|126) 불일치:', frameLen);
+            return;
+          }
+
+          if (typeof sequence[0][0] !== 'number') {
+            console.warn('⚠️ sequence 값이 number 아님');
+            return;
+          }
+
+          if (inferInFlight) return;
+          inferInFlight = true;
+
+          const res = await flask.post('/predict', { sequence });
+          console.log('📥 Flask 응답:', res.data);
+
+          io.to(roomId).emit('prediction', res.data);
+        } catch (err) {
+          if (err.response) {
+            console.error('❌ Flask 응답 에러:', err.response.status, err.response.data);
+          } else if (err.request) {
+            console.error('❌ Flask 무응답(타임아웃/네트워크):', err.message);
+          } else {
+            console.error('❌ 예측 중 예외:', err.message);
+          }
+          io.to(roomId).emit('prediction', { label: "예측 실패" });
+        } finally {
+          inferInFlight = false;
         }
-      });            
+      });
     });
   });
 };

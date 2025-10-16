@@ -1,132 +1,132 @@
 import os
 import numpy as np
-import torch
+import math
+from collections import defaultdict
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tensorflow.keras.models import load_model
-import traceback
 
-# Flask 앱 초기화
 app = Flask(__name__)
 CORS(app, origins="*")
 
-# 모델 경로 설정 (경로는 그대로 유지)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DYNAMIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/dynamic_gesture_model3.h5')
 STATIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/cnn_model_bothhands.keras')
 
-# 라벨 매핑
-label_to_class_dynamic = {
-    0: "help",
-    1: "dangerous",
-    2: "careful",
-    3: "hello",
-    4: "lose",
-    5: "card",
-    6: "balance",
-    7: "deficit",
-    8: "subway"
-}
+# ===== 라벨 매핑 =====
+cnn_class_map = {0: '1', 1: '2', 2: '3', 3: '4', 4: '5', 5: '6', 6: '7', 7: '8', 8: '9'}
+lstm_class_map = {0: 'help', 1: 'dangerous', 2: 'careful', 3: 'hello', 4: 'lose', 5:'card', 6:'balance',7:'deficit',8:'subway'}
 
-label_to_class_static = {
-    0: '1',
-    1: '2',
-    2: '3',
-    3: '4',
-    4: '5',
-    5: '6',
-    6: '7',
-    7: '8',
-    8: '9'
-}
+# ===== 모델 로드 =====
+static_model = load_model(STATIC_MODEL_PATH)
+dynamic_model = load_model(DYNAMIC_MODEL_PATH)
 
-# 모델 로딩
-model_dynamic = load_model(DYNAMIC_MODEL_PATH)
-model_static = load_model(STATIC_MODEL_PATH)
-
-# 트래젝토리 변화량 계산
+# ===== trajectory 계산 =====
 def compute_trajectory_variance(sequence):
     diffs = np.diff(sequence, axis=0)
     norms = np.linalg.norm(diffs, axis=1)
-    return np.mean(norms)
+    return float(np.mean(norms)) if norms.size else 0.0
 
-# 동적 입력 변환 (절대좌표 → 상대좌표, 손목 기준)
+# ===== 상대좌표 변환 =====
 def relative_coordinates_dynamic(seq):
-    seq = np.array(seq).reshape(30, 42, 3)
-    wrist = seq[:, 0:1, :]  # 왼손 손목 좌표
+    seq = np.array(seq, dtype=np.float32).reshape(30, 42, 3)
+    wrist = seq[:, 0:1, :]
     rel = seq - wrist
     return rel.reshape(30, 126)
 
-# 정적 입력 변환 (오른손은 비활성화)
-def preprocess_static_input(first_frame):
-    data = np.array(first_frame).reshape(42, 3)
-    wrist = data[0]
-    rel = data - wrist
-    left_hand = rel[:21]
-    right_hand = rel[21:]
-    combined = np.concatenate([left_hand, right_hand], axis=0)
-    # 오른손 마스크 0, 왼손만 활성화
-    mask = np.array([1]*21 + [0]*21, dtype=np.float32)
-    return combined, mask
+# ===== bigram LM + beam decoder =====
+class ToyNgramLM:
+    def __init__(self, vocab, bigram_counts=None, add_k=0.5):
+        self.vocab = list(vocab)
+        self.add_k = add_k
+        self.bigram = defaultdict(int)
+        if bigram_counts:
+            for (w1, w2), c in bigram_counts.items():
+                self.bigram[(w1, w2)] = int(c)
+        self.unigram = defaultdict(int)
+        for (w1, w2), c in self.bigram.items():
+            self.unigram[w1] += c
+        self.V = len(self.vocab) + 1
 
-# 예측 API
+    def log_prob(self, w2, hist):
+        w1 = hist[-1] if hist else "<s>"
+        c12 = self.bigram[(w1, w2)]
+        c1 = self.unigram[w1]
+        p = (c12 + self.add_k) / (c1 + self.add_k * self.V)
+        return math.log(max(p, 1e-9))
+
+class BeamDecoder:
+    def __init__(self, lm, beam_size=5, alpha=0.6):
+        self.lm = lm
+        self.beam_size = beam_size
+        self.alpha = alpha
+        self.beam = [([], 0.0)]
+
+    def step(self, word, conf):
+        new_beam = []
+        for tokens, score in self.beam:
+            logp = self.lm.log_prob(word, tokens)
+            new_score = score + logp + self.alpha * math.log(max(conf, 1e-6))
+            new_beam.append((tokens + [word], new_score))
+        new_beam.sort(key=lambda x: x[1], reverse=True)
+        self.beam = new_beam[:self.beam_size]
+
+    def best(self):
+        return self.beam[0][0] if self.beam else []
+
+# ===== LM 초기화 =====
+lm_vocab = list(lstm_class_map.values()) + list(cnn_class_map.values())
+lm = ToyNgramLM(lm_vocab)
+decoder = BeamDecoder(lm)
+
+# ===== 예측 엔드포인트 =====
 @app.route("/predict", methods=["POST"])
 def predict():
-    try:
-        data = request.get_json()
-        if not data or "sequence" not in data:
-            return jsonify({ "error": "Missing 'sequence' in request." }), 400
+    data = request.get_json()
+    sequence = np.array(data["sequence"], dtype=np.float32)
+    mask = np.ones(42, dtype=np.float32)
 
-        sequence = np.array(data["sequence"], dtype=np.float32)
+    # ✅ 한 손 좌표만 있을 경우 (30,63) → (30,126)으로 zero-padding
+    if sequence.shape == (30, 63):
+        zeros = np.zeros((30, 63), dtype=np.float32)
+        sequence = np.concatenate([sequence, zeros], axis=1)
 
-        if sequence.shape not in [(30, 126), (30, 63)]:
-            return jsonify({ "error": f"Expected shape (30,126) or (30,63), got {sequence.shape}" }), 400
+    traj_var = compute_trajectory_variance(sequence)
+    if traj_var < 0.05:  # CNN
+        static_input = sequence[0].reshape(1, 42, 3)
+        mask_input = mask.reshape(1, 42)
+        mask_input[:, 21:] = 0.0
+        probs = static_model.predict([static_input, mask_input], verbose=0)[0]
+        confidence = float(np.max(probs))
+        label = int(np.argmax(probs))
+        label_text = cnn_class_map[label]
+        model_type = "STATIC-CNN"
+    else:  # LSTM
+        seq_rel = relative_coordinates_dynamic(sequence)
+        probs = dynamic_model.predict(seq_rel.reshape(1, 30, 126), verbose=0)[0]
+        confidence = float(np.max(probs))
+        label = int(np.argmax(probs))
+        label_text = lstm_class_map[label]
+        model_type = "DYNAMIC-LSTM"
 
-        traj_var = compute_trajectory_variance(sequence)
-        gesture_type = "static" if traj_var < 0.05 else "dynamic"
-        print(f"예측 분기: {gesture_type} (traj_var={traj_var:.5f})")
+    if label_text == "help" and confidence < 0.95:
+        label_text = "Waiting..."
 
-        if gesture_type == "dynamic":
-            if sequence.shape != (30, 126):
-                return jsonify({ "error": "Dynamic model requires shape (30,126)" }), 400
+    # beam decoder 업데이트
+    if label_text != "Waiting...":
+        decoder.step(label_text, confidence)
 
-            rel_seq = relative_coordinates_dynamic(sequence)
-            output = model_dynamic.predict(np.expand_dims(rel_seq, 0), verbose=0)[0]
-            confidence = float(np.max(output))
-            label = int(np.argmax(output))
-            label_text = label_to_class_dynamic.get(label, "알 수 없음")
+    return jsonify({
+        "label": label_text,
+        "model": model_type,
+        "trajVar": traj_var,
+        "confidence": confidence,
+        "sentence": " ".join(decoder.best())
+    })
 
-            # confidence 필터링
-            if (label_text == "help" and confidence < 0.95) or confidence < 0.8:
-                return jsonify({ "result": "Waiting..." })
+@app.route("/", methods=["GET"])
+def health():
+    return "ok", 200
 
-            result = label_text
-
-        else:
-            first_frame = sequence[0]
-            # 한 손 좌표면 zero-padding
-            if first_frame.shape[0] == 63:
-                first_frame = np.concatenate([first_frame, np.zeros(63, dtype=np.float32)])
-            first_frame = first_frame.reshape(42, 3)
-
-            static_input, mask = preprocess_static_input(first_frame)
-            output = model_static.predict([np.expand_dims(static_input, 0), np.expand_dims(mask, 0)], verbose=0)[0]
-            label = int(np.argmax(output))
-            result = label_to_class_static.get(label, "알 수 없음")
-
-        return jsonify({ "result": result })
-
-    except Exception as e:
-        print("예측 중 예외:", e)
-        traceback.print_exc()
-        return jsonify({ "error": str(e) }), 500
-
-# 헬스체크 라우트
-@app.route("/", methods=["GET", "HEAD"])
-def health_check():
-    return "", 200
-
-# 서버 실행
 if __name__ == "__main__":
-    port = int(os.getenv("FLASK_PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000)
