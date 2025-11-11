@@ -328,7 +328,6 @@ function Mancam() {
           <SmallButton onClick={() => handlePlayGif('아닙니다')}>아닙니다</SmallButton>
         </ButtonGrid>
         <WideButton onClick={() => handlePlayGif('다시 한번 인식해주시겠어요?')}>다시 한번 인식해주시겠어요?</WideButton>
-        <WideButton onClick={() => handlePlayGif('지원되는 수어 리스트')}>지원되는 수어 리스트</WideButton>
         <WideButton onClick={() => handlePlayGif('민원이 해결되었나요?')}>민원이 해결되었나요?</WideButton>
       </ButtonWrapper>
 
