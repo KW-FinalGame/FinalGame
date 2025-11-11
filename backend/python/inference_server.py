@@ -13,9 +13,29 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DYNAMIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/dynamic_gesture_model3.h5')
 STATIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/cnn_model_bothhands.keras')
 
-# ===== 라벨 매핑 =====
-cnn_class_map = {0: '1', 1: '2', 2: '3', 3: '4', 4: '5', 5: '6', 6: '7', 7: '8', 8: '9'}
-lstm_class_map = {0: 'help', 1: 'dangerous', 2: 'careful', 3: 'hello', 4: 'lose', 5:'card', 6:'balance',7:'deficit',8:'subway'}
+# ===== 라벨 매핑 (한글화) =====
+cnn_class_map = {
+    0: '1',
+    1: '2',
+    2: '3',
+    3: '4',
+    4: '5',
+    5: '6',
+    6: '7',
+    7: '8',
+    8: '9'
+}
+lstm_class_map = {
+    0: '도와주세요',       # help
+    1: '위험해요',         # dangerous
+    2: '조심하세요',       # careful
+    3: '안녕하세요',       # hello
+    4: '잃어버렸어요',     # lose
+    5: '카드',             # card
+    6: '잔액',             # balance
+    7: '부족해요',         # deficit
+    8: '지하철'            # subway
+}
 
 # ===== 모델 로드 =====
 static_model = load_model(STATIC_MODEL_PATH)
@@ -119,12 +139,13 @@ def predict():
         label_text = lstm_class_map[label]
         model_type = "DYNAMIC-LSTM"
 
-    if label_text == "help" and confidence < 0.95:
-        label_text = "Waiting..."
+    # ====== 한글화된 상태 메시지 ======
+    if label_text == "도와주세요" and confidence < 0.95:
+        label_text = "대기 중..."
     elif confidence < 0.8:
-        label_text = "Waiting..."
+        label_text = "대기 중..."
 
-    if label_text != "Waiting...":
+    if label_text != "대기 중...":
         if label_text == state["current"]:
             state["streak"] += 1
         else:
