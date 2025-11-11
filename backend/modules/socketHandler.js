@@ -47,6 +47,14 @@ const socketHandler = (server) => {
       io.to(roomId).emit('manager-status', { connected: isManagerConnected });
       io.to(roomId).emit('room-info', { roomId, members, isManagerConnected });
 
+      // ✅ Flask decoder 초기화 (재입장 시 이전 예측 기록 제거)
+      try {
+        await flask.post('/reset', { roomId });
+        console.log(`🧹 Flask decoder reset 완료 for room: ${roomId}`);
+      } catch (err) {
+        console.warn('⚠️ Flask decoder reset 실패 (무시 가능):', err.message);
+      }
+
       // ===== WebRTC 시그널링 =====
       socket.on('offer', (offer) => {
         socket.to(roomId).emit('offer', offer);
@@ -120,30 +128,30 @@ const socketHandler = (server) => {
       socket.on('sequence', async ({ sequence }) => {
         try {
           if (!roomId) {
-            console.warn('⚠️ roomId 없음: sequence 무시');
+            console.warn('roomId 없음: sequence 무시');
             return;
           }
 
           if (!Array.isArray(sequence) || sequence.length !== 30) {
-            console.warn('⚠️ sequence 길이(30) 불일치:', sequence?.length);
+            console.warn('sequence 길이(30) 불일치:', sequence?.length);
             return;
           }
 
           const frameLen = Array.isArray(sequence[0]) ? sequence[0].length : null;
           if (!(frameLen === 126 || frameLen === 63)) {
-            console.warn('⚠️ frame 길이(63|126) 불일치:', frameLen);
+            console.warn('frame 길이(63|126) 불일치:', frameLen);
             return;
           }
 
           if (typeof sequence[0][0] !== 'number') {
-            console.warn('⚠️ sequence 값이 number 아님');
+            console.warn('sequence 값이 number 아님');
             return;
           }
 
           if (inferInFlight) return;
           inferInFlight = true;
 
-          const res = await flask.post('/predict', { sequence });
+          const res = await flask.post('/predict', { sequence, roomId });
           console.log('📥 Flask 응답:', res.data);
 
           io.to(roomId).emit('prediction', res.data);

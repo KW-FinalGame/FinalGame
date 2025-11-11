@@ -308,6 +308,36 @@ function Cam() {
   const landmarkBuffer = useRef([]);
   const lastFrameTime = useRef(Date.now());
 
+  // hand 처리 함수
+  const processHandsAbsolute = (handsLandmarks) => {
+    const raw = [];
+    const wristsX = [];
+
+    for (const hand of handsLandmarks) {
+      const coords = hand.map(pt => [pt.x, pt.y, pt.z]).flat();
+      const safe = coords.map(v => (Number.isFinite(v) ? v : 0));
+      raw.push(safe);
+      wristsX.push(hand[0].x);
+    }
+
+    let left, right;
+    if (raw.length === 0) {
+      left = new Array(63).fill(0);
+      right = new Array(63).fill(0);
+    } else if (raw.length === 1) {
+      left = raw[0];
+      right = new Array(63).fill(0);
+    } else {
+      const [iLeft, iRight] = wristsX[0] <= wristsX[1] ? [0, 1] : [1, 0];
+      left = raw[iLeft];
+      right = raw[iRight];
+    }
+
+    const combined = [...left, ...right]; // (126,)
+    return combined;
+  };
+
+
   useEffect(() => {
     const hands = new window.Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
@@ -342,47 +372,6 @@ function Cam() {
   }, []);
 
   useEffect(() => {
-    const computeTrajectoryVar = (frames) => {
-      let sum = 0;
-      for (let i = 1; i < frames.length; i++) {
-        const prev = frames[i - 1];
-        const cur = frames[i];
-        let d = 0;
-        for (let j = 0; j < prev.length; j++) {
-          d += (cur[j] - prev[j]) ** 2;
-        }
-        sum += Math.sqrt(d);
-      }
-      return sum / (frames.length - 1);
-    };
-
-    const toRelativeStatic = (frame) => {
-      const wrist = frame.slice(0, 3); // 기준점
-      const rel = [];
-      for (let i = 0; i < 42; i++) {
-        const x = frame[i * 3] - wrist[0];
-        const y = frame[i * 3 + 1] - wrist[1];
-        const z = frame[i * 3 + 2] - wrist[2];
-        rel.push(x, y, z);
-      }
-      return rel.flat(); // ✅ shape (126,)
-    };        
-
-    const toRelativeDynamic = (seq) => {
-      const reshaped = seq.map(f => {
-        const out = [];
-        for (let i = 0; i < 42; i++) {
-          out.push([f[i * 3], f[i * 3 + 1], f[i * 3 + 2]]);
-        }
-        return out;
-      });
-      return reshaped.map(frame => {
-        const wrist = frame[0];
-        const rel = frame.map(p => [p[0] - wrist[0], p[1] - wrist[1], p[2] - wrist[2]]);
-        return rel.flat();
-      });
-    };
-
     const sequence = [];
     const intervalId = setInterval(() => {
       const now = Date.now();
@@ -393,17 +382,14 @@ function Cam() {
 
       if (landmarkBuffer.current.length === 0) return;
 
-      const coords = landmarkBuffer.current.map(hand => hand.flatMap(pt => [pt.x, pt.y, pt.z]));
-      while (coords.length < 2) coords.push(new Array(63).fill(0));
-      if (coords[0][0] > coords[1][0]) coords.reverse();
-      const frame = [...coords[0], ...coords[1]];
+      const frame = processHandsAbsolute(landmarkBuffer.current);
       sequence.push(frame);
 
       if (sequence.length === 30) {
         socket.emit("sequence", { sequence });
         sequence.length = 0;
       }
-           
+                
       console.log("sequence.length:", sequence.length);
       console.log("sequence:", sequence);
 
@@ -412,7 +398,6 @@ function Cam() {
     return () => clearInterval(intervalId);
   }, []);
 
-  
   
   const initializeWebRTC = async () => {
     try {
