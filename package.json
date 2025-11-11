@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "scripts": {
         "start": "concurrently \"npm run flask\" \"npm run wait-and-server\" \"npm run client\"",
-        "flask": "cd backend/python && python inference_server.py",
+        "flask": "cd backend/python && python3 inference_server.py",
         "wait-and-server": "wait-on http://localhost:5000 && npm run server",
         "server": "cd backend && node server.js",
         "client": "cd frontend && npm start"
