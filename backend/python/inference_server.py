@@ -77,16 +77,26 @@ class BeamDecoder:
 # ===== LM 초기화 =====
 lm_vocab = list(lstm_class_map.values()) + list(cnn_class_map.values())
 lm = ToyNgramLM(lm_vocab)
-decoder = BeamDecoder(lm)
+
+# roomId 별 디코더 + 원본과 동일한 streak 게이트 상태
+decoders = {}
+room_states = defaultdict(lambda: {"current": None, "streak": 0, "accepted": []})
+STREAK_N = 2  # 원본과 동일
 
 # ===== 예측 엔드포인트 =====
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json()
     sequence = np.array(data["sequence"], dtype=np.float32)
+    room_id = data.get("roomId", "default")
     mask = np.ones(42, dtype=np.float32)
 
-    # ✅ 한 손 좌표만 있을 경우 (30,63) → (30,126)으로 zero-padding
+    if room_id not in decoders:
+        decoders[room_id] = BeamDecoder(lm)
+    decoder = decoders[room_id]
+    state = room_states[room_id]
+
+    # 한 손 좌표만 있을 경우 (30,63) → (30,126)으로 zero-padding
     if sequence.shape == (30, 63):
         zeros = np.zeros((30, 63), dtype=np.float32)
         sequence = np.concatenate([sequence, zeros], axis=1)
@@ -101,7 +111,7 @@ def predict():
         label = int(np.argmax(probs))
         label_text = cnn_class_map[label]
         model_type = "STATIC-CNN"
-    else:  # LSTM
+    else:
         seq_rel = relative_coordinates_dynamic(sequence)
         probs = dynamic_model.predict(seq_rel.reshape(1, 30, 126), verbose=0)[0]
         confidence = float(np.max(probs))
@@ -111,10 +121,23 @@ def predict():
 
     if label_text == "help" and confidence < 0.95:
         label_text = "Waiting..."
+    elif confidence < 0.8:
+        label_text = "Waiting..."
 
-    # beam decoder 업데이트
     if label_text != "Waiting...":
-        decoder.step(label_text, confidence)
+        if label_text == state["current"]:
+            state["streak"] += 1
+        else:
+            state["current"] = label_text
+            state["streak"] = 1
+
+        if state["streak"] >= STREAK_N:
+            if not state["accepted"] or state["accepted"][-1] != label_text:
+                decoder.step(label_text, confidence)
+                state["accepted"].append(label_text)
+    else:
+        state["current"] = None
+        state["streak"] = 0
 
     return jsonify({
         "label": label_text,
@@ -127,6 +150,15 @@ def predict():
 @app.route("/", methods=["GET"])
 def health():
     return "ok", 200
+
+# 재입장 시 리셋용 엔드포인트 — 원본의 “프로그램 재시작 시 초기화”에 대응
+@app.route("/reset", methods=["POST"])
+def reset_decoder():
+    data = request.get_json()
+    room_id = data.get("roomId", "default")
+    decoders.pop(room_id, None)
+    room_states.pop(room_id, None)
+    return jsonify({"message": f"reset {room_id}"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
