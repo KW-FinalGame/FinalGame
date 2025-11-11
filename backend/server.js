@@ -23,7 +23,7 @@ mongoose.connect(process.env.MONGODB_URL, {
 
 // CORS 설정 (포트 3000에서 온 요청 허용)
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'http://172.31.5.120:3000',
   credentials: true //쿠키나 헤더 포함 허용
 }));
 
