@@ -8,7 +8,7 @@ import Link from "../assets/imgs/link.png";
 import { motion , AnimatePresence } from 'framer-motion';
 
 // Flask 서버 URL
-const FLASK_URL = "https://finalgame.duckdns.org/predict";
+const FLASK_URL = "http://43.200.2.57:5000/predict";
 
 const PageWrapper = styled.div`
   display: flex;
