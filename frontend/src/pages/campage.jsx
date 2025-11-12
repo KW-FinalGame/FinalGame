@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Webcam from 'react-webcam'; 
+import Webcam from 'react-webcam';
 import { isAuthenticated } from '../utils/auth';
 import Modal from 'react-modal';
-import Link from "../assets/imgs/link.png"; 
-import { motion , AnimatePresence } from 'framer-motion';
+import Link from "../assets/imgs/link.png";
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Flask 서버 URL
 const FLASK_URL = "http://127.0.0.1:5000/predict";
@@ -177,16 +177,24 @@ function ComPage() {
       }
     });
 
-    const camera = new window.Camera(webcamRef.current.video, {
+    const videoEl = webcamRef.current?.video;
+    if (!videoEl) return;
+
+    const camera = new window.Camera(videoEl, {
       onFrame: async () => {
-        await hands.send({ image: webcamRef.current.video });
+        await hands.send({ image: videoEl });
       },
       width: 640,
       height: 480,
     });
 
     camera.start();
-    return () => camera.stop();
+
+    // 🔥 cleanup
+    return () => {
+      camera.stop();
+      hands.close(); // Mediapipe 객체 정리
+    };
   }, []);
 
   // 시퀀스 전송
@@ -230,7 +238,7 @@ function ComPage() {
   const handleVideoEnded = () => {
     setShowVideoModal(false);
     setVideoUrl('');
-  };  
+  };
 
   const goBackToMain = () => {
     navigate('/main');
