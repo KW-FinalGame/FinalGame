@@ -279,7 +279,7 @@ function Home() {
         role = 'admin';
       }
   
-      const response = await axios.post('http://http://172.31.5.120:3002/login', {
+      const response = await axios.post('/api/login', {
         id: loginId,
         password: loginPw,
         role,
@@ -303,7 +303,7 @@ function Home() {
 
   const handleSignup = async () => {
     try {
-      await axios.post('http://localhost:3002/register', {
+      await axios.post('/register', {
         username: name,
         id: userId,
         password,
@@ -427,7 +427,7 @@ function Home() {
 
             try {
               setUploading(true);
-              await axios.post('http://localhost:3002/upload-disability-image', formData);
+              await axios.post('/upload-disability-image', formData);
               alert('인증서가 업로드되었습니다.');
               setIsCertified(true);
               setShowWebcam(false);

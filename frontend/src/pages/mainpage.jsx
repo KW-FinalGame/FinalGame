@@ -435,7 +435,7 @@ function Main() {
           console.log('📍 현재 위치:', latitude, longitude);
   
           try {
-            const response = await axios.post('http://localhost:3002/nearby-subway-stations', {
+            const response = await axios.post('/api/nearby-subway-stations', {
               latitude,
               longitude
             });
