@@ -279,7 +279,7 @@ function Home() {
         role = 'admin';
       }
   
-      const response = await axios.post('/api/login', {
+      const response = await axios.post('http://http://172.31.5.120:3002/login', {
         id: loginId,
         password: loginPw,
         role,
