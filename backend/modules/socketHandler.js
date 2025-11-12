@@ -5,7 +5,7 @@ const SignGif = require('../models/signgif');
 const socketHandler = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: 'http://localhost:3000',
+      origin: 'http://43.200.2.57:3000',
       methods: ['GET', 'POST'],
       credentials: true
     }
@@ -13,7 +13,7 @@ const socketHandler = (server) => {
 
   // ✅ Flask axios 인스턴스 (타임아웃, 환경변수 사용)
   const flask = axios.create({
-    baseURL: process.env.FLASK_URL || 'http://127.0.0.1:5000',
+    baseURL: process.env.FLASK_URL || 'http://43.200.2.57:5000',
     timeout: 3000,
   });
 
