@@ -126,47 +126,54 @@ const socketHandler = (server) => {
       let inferInFlight = false;
 
       socket.on('sequence', async ({ sequence }) => {
-        try {
-          if (!roomId) {
-            console.warn('roomId 없음: sequence 무시');
-            return;
-          }
+  try {
+    if (!roomId) {
+      console.warn('roomId 없음: sequence 무시');
+      return;
+    }
 
-          if (!Array.isArray(sequence) || sequence.length !== 30) {
-            console.warn('sequence 길이(30) 불일치:', sequence?.length);
-            return;
-          }
+    if (!Array.isArray(sequence) || sequence.length !== 30) {
+      console.warn('sequence 길이(30) 불일치:', sequence?.length);
+      return;
+    }
 
-          const frameLen = Array.isArray(sequence[0]) ? sequence[0].length : null;
-          if (!(frameLen === 126 || frameLen === 63)) {
-            console.warn('frame 길이(63|126) 불일치:', frameLen);
-            return;
-          }
+    const frameLen = Array.isArray(sequence[0]) ? sequence[0].length : null;
+    if (!(frameLen === 126 || frameLen === 63)) {
+      console.warn('frame 길이(63|126) 불일치:', frameLen);
+      return;
+    }
 
-          if (typeof sequence[0][0] !== 'number') {
-            console.warn('sequence 값이 number 아님');
-            return;
-          }
+    // ✅ frame 길이 63이면 패딩해서 126으로 맞춤
+    if (frameLen === 63) {
+      sequence = sequence.map(f => [...f, ...Array(63).fill(0)]);
+      console.log('sequence 길이 63 → 126으로 패딩 완료');
+    }
 
-          if (inferInFlight) return;
-          inferInFlight = true;
+    if (typeof sequence[0][0] !== 'number') {
+      console.warn('sequence 값이 number 아님');
+      return;
+    }
 
-          const res = await flask.post('/predict', { sequence, roomId });
-          console.log('📥 Flask 응답:', res.data);
+    if (inferInFlight) return;
+    inferInFlight = true;
 
-          io.to(roomId).emit('prediction', res.data);
-        } catch (err) {
-          if (err.response) {
-            console.error('❌ Flask 응답 에러:', err.response.status, err.response.data);
-          } else if (err.request) {
-            console.error('❌ Flask 무응답(타임아웃/네트워크):', err.message);
-          } else {
-            console.error('❌ 예측 중 예외:', err.message);
-          }
-          io.to(roomId).emit('prediction', { label: "예측 실패" });
-        } finally {
-          inferInFlight = false;
-        }
+    const res = await flask.post('/predict', { sequence, roomId });
+    console.log('📥 Flask 응답:', res.data);
+
+    io.to(roomId).emit('prediction', res.data);
+
+  } catch (err) {
+    if (err.response) {
+      console.error(' Flask 응답 에러:', err.response.status, err.response.data);
+    } else if (err.request) {
+      console.error(' Flask 무응답(타임아웃/네트워크):', err.message);
+    } else {
+      console.error(' 예측 중 예외:', err.message);
+    }
+    io.to(roomId).emit('prediction', { label: "예측 실패" });
+  } finally {
+    inferInFlight = false;
+  }
       });
     });
   });
