@@ -4,7 +4,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
 import Link from "../assets/imgs/link.png"; 
 
-const socket = io('http://localhost:3002');
+const socket = io('/', {
+  path: '/socket.io',          // ← Nginx 설정과 반드시 동일
+  transports: ['websocket'],   // (선택) WebSocket만 사용
+  withCredentials: true,       // (쿠키 사용 시 필수)
+});
 
 const PageWrapper = styled.div`
   display: flex;

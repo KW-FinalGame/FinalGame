@@ -5,7 +5,7 @@ const SignGif = require('../models/signgif');
 const socketHandler = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: 'http://43.200.2.57:3000',
+      origin: 'https://finalgame.duckdns.org',
       methods: ['GET', 'POST'],
       credentials: true
     }
