@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Webcam from 'react-webcam'; 
+import Webcam from 'react-webcam';
 import { isAuthenticated } from '../utils/auth';
 import Modal from 'react-modal';
-import Link from "../assets/imgs/link.png"; 
-import { motion , AnimatePresence } from 'framer-motion';
+import Link from "../assets/imgs/link.png";
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Flask 서버 URL
 const FLASK_URL = "http://43.200.2.57:5000/predict";
@@ -155,82 +155,93 @@ function ComPage() {
     return combined;
   };
 
-  // Mediapipe 초기화
-  useEffect(() => {
-    const hands = new window.Hands({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-    });
+// Mediapipe 초기화
+// ==========================
+useEffect(() => {
+  const hands = new window.Hands({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+  });
 
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.7,
-    });
+  hands.setOptions({
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.7,
+  });
 
-    hands.onResults((results) => {
-      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        landmarkBuffer.current = results.multiHandLandmarks;
-        lastFrameTime.current = Date.now();
-      } else {
-        landmarkBuffer.current = [];
-      }
-    });
+  hands.onResults((results) => {
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+      landmarkBuffer.current = results.multiHandLandmarks;
+      lastFrameTime.current = Date.now();
+    } else {
+      landmarkBuffer.current = [];
+    }
+  });
 
-    const camera = new window.Camera(webcamRef.current.video, {
-      onFrame: async () => {
-        await hands.send({ image: webcamRef.current.video });
-      },
-      width: 640,
-      height: 480,
-    });
+  const videoEl = webcamRef.current?.video;
+  if (!videoEl) return;
 
-    camera.start();
-    return () => camera.stop();
-  }, []);
+  const camera = new window.Camera(videoEl, {
+    onFrame: async () => {
+      await hands.send({ image: videoEl });
+    },
+    width: 640,
+    height: 480,
+  });
 
-  // 시퀀스 전송
-  useEffect(() => {
-    const sequence = [];
-    const intervalId = setInterval(() => {
-      const now = Date.now();
-      if (now - lastFrameTime.current > 300) {
-        landmarkBuffer.current = [];
-        return;
-      }
+  camera.start();
 
-      if (landmarkBuffer.current.length === 0) return;
+  // ✅ cleanup (중요!)
+  return () => {
+    camera.stop();
+    hands.close();
+  };
+}, []);
 
-      const frame = processHandsAbsolute(landmarkBuffer.current);
-      sequence.push(frame);
+// ==========================
+// 시퀀스 전송
+// ==========================
+useEffect(() => {
+  const sequence = [];
+  const intervalId = setInterval(() => {
+    const now = Date.now();
+    if (now - lastFrameTime.current > 300) {
+      landmarkBuffer.current = [];
+      return;
+    }
 
-      // ✅ 30프레임마다 Flask로 전송
-      if (sequence.length === 30) {
-        fetch(FLASK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sequence }),
+    if (landmarkBuffer.current.length === 0) return;
+    const frame = processHandsAbsolute(landmarkBuffer.current);
+    sequence.push(frame);
+
+    // ✅ 30프레임마다 Flask로 전송
+    if (sequence.length === 30) {
+      fetch(FLASK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sequence }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("🧠 예측 결과:", data);
+          console.log("📊 traj_var:", data.debug.traj_var);
+          setModelResult(data.sentence || data.label);
         })
-          .then((res) => res.json())
-          .then((data) => {
-            console.log("🧠 예측 결과:", data);
-            console.log("📊 traj_var:", data.debug.traj_var);
-            setModelResult(data.sentence || data.label);
-          })
-          .catch((err) => console.error("예측 오류:", err));
+        .catch((err) => console.error("예측 오류:", err));
 
-        sequence.length = 0;
-      }
+      sequence.length = 0;
+    }
+  }, 33);
 
-    }, 33);
+  // ✅ cleanup
+  return () => clearInterval(intervalId);
+}, []);
 
-    return () => clearInterval(intervalId);
-  }, []);
 
   const handleVideoEnded = () => {
     setShowVideoModal(false);
     setVideoUrl('');
-  };  
+  };
 
   const goBackToMain = () => {
     navigate('/main');
