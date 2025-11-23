@@ -22,17 +22,17 @@ const socketHandler = require("./modules/socketHandler");
 const isPkg = typeof process.pkg !== "undefined";
 
 // ===========================================
-// 2) Flask 자동 실행 (spawn 방식 — 100% 성공)
+// 2) Flask 자동 실행 (spawn 방식 )
 // ===========================================
 if (isPkg) {
   const flaskPath = path.join(process.cwd(), "inference_server.exe");
 
-  console.log("🔥 Trying to spawn Flask at:", flaskPath);
-
-  const flask = spawn(flaskPath, [], {
-    cwd: process.cwd(),
-    shell: true
-  });
+  const flask = spawn(`"${flaskPath}"`, {
+  shell: true,
+  cwd: process.cwd(),
+  windowsHide: false,
+  detached: true
+});
 
   flask.stdout.on("data", (data) => {
     console.log("[FLASK STDOUT]", data.toString());
@@ -46,9 +46,8 @@ if (isPkg) {
     console.log("⚠ Flask 종료됨 (code:", code, ")");
   });
 
-  console.log("🔥 Flask launched (with logs)");
+  console.log(" Flask spawn 실행됨");
 }
-
 
 // ===========================================
 // 3) buildPath 설정
