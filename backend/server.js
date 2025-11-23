@@ -1,5 +1,4 @@
 require('dotenv').config(); // 환경변수 로드
-const axios = require('axios');
 const express = require('express');
 const app = express();
 const path = require('path');
@@ -11,8 +10,9 @@ const server = http.createServer(app); // http 서버 생성
 const authRoutes = require('./routes/authRoutes'); // 라우터 파일 가져오기
 const mapRoutes = require('./routes/mapRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const predictRoutes = require('./routes/predictRoutes');
 const socketHandler = require('./modules/socketHandler');
-
+const { execFile } = require('child_process'); // ✅ Flask exe 실행용 추가
 
 // MongoDB 연결 설정
 mongoose.connect(process.env.MONGODB_URL, {
@@ -49,26 +49,49 @@ const authenticateToken = (req, res, next) => {
 app.use('/', authRoutes); // '/' 경로로 authRoutes를 설정
 app.use('/', mapRoutes);
 app.use('/', adminRoutes);
+app.use('/', predictRoutes);
 app.use('/uploads', express.static('uploads')); // 업로드 정적 파일 추가
 
 // 배포 시 활성화 할 부분
-// // React 정적 파일 제공
-// app.use(express.static(path.join(__dirname, '../frontend/build')));
-
-// // 모든 기타 경로에 대해 React의 index.html 제공
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
-// });
+// React 정적 파일 제공
+app.use(express.static(path.join(__dirname, '../frontend/build')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+});
 
 // socketHandler에 http server 전달
 socketHandler(server);
 
+// ✅ PyInstaller로 만든 Flask exe 실행 (있으면 자동 실행)
+//    개발 환경: backend/python/dist/inference_server.exe
+//    pkg exe 환경: dist/FinalGame.exe 옆에 inference_server.exe
+const isPkg = typeof process.pkg !== 'undefined';
+
+const buildPath = isPkg
+  ? path.join(path.dirname(process.execPath), 'build')
+  : path.join(__dirname, '../frontend/build');
+
+app.use(express.static(buildPath));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(buildPath, 'index.html'));
+});
+
 // ✅ Flask 서버 확인 (환경변수로 주소 관리)
 (async () => {
   try {
-    await axios.post(`${process.env.FLASK_BASE_URL}/predict`, {
-      sequence: Array(30).fill(Array(63).fill(0)) // 테스트 입력
+    const res = await fetch(`${process.env.FLASK_BASE_URL}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sequence: Array(30).fill(Array(63).fill(0)) // 테스트 입력
+      })
     });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     console.log("✅ Flask 서버 연결 확인됨");
   } catch (e) {
     console.error("❌ Flask 서버 연결 실패:", e.message);

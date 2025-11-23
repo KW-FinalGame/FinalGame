@@ -1,5 +1,4 @@
 const express = require('express');
-const axios = require('axios');
 require('dotenv').config();
 
 const router = express();
@@ -50,11 +49,16 @@ router.post('/nearby-subway-stations', async (req, res) => {
   const subwayApiUrl = `http://openapi.seoul.go.kr:8088/${SUBWAY_API_KEY}/json/StationAdresTelno/1/300/`;
 
   try {
-    const subwayResponse = await axios.get(subwayApiUrl);
-    const stationData = subwayResponse?.data?.StationAdresTelno?.row;
+    // ✅ axios → fetch로 변경
+    const subwayResponse = await fetch(subwayApiUrl);
+    if (!subwayResponse.ok) {
+      throw new Error(`SUBWAY API HTTP ${subwayResponse.status}`);
+    }
+    const subwayJson = await subwayResponse.json();
+    const stationData = subwayJson?.StationAdresTelno?.row;
 
     if (!stationData || stationData.length === 0) {
-      console.error("열린데이터 API 응답에 row가 없음:", subwayResponse.data);
+      console.error("열린데이터 API 응답에 row가 없음:", subwayJson);
       return res.status(500).json({ error: "지하철 데이터가 없습니다." });
     }
 
@@ -72,11 +76,17 @@ router.post('/nearby-subway-stations', async (req, res) => {
         const searchUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(address)}`;
 
         try {
-          const kakaoRes = await axios.get(searchUrl, {
+          // ✅ axios → fetch로 변경
+          const kakaoRes = await fetch(searchUrl, {
             headers: { Authorization: `KakaoAK ${REST_API_KEY}` }
           });
 
-          const documents = kakaoRes.data.documents;
+          if (!kakaoRes.ok) {
+            throw new Error(`KAKAO API HTTP ${kakaoRes.status}`);
+          }
+
+          const kakaoJson = await kakaoRes.json();
+          const documents = kakaoJson.documents;
           if (!documents || documents.length === 0) return null;
 
           const stationLat = parseFloat(documents[0].y);

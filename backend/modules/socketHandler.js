@@ -1,6 +1,8 @@
-const axios = require('axios');
 const { Server } = require("socket.io");
 const SignGif = require('../models/signgif');
+
+// 기존 FLASK_BASE_URL은 사용하지 않음
+// const FLASK_BASE_URL = process.env.FLASK_URL || 'http://127.0.0.1:5000';
 
 const socketHandler = (server) => {
   const io = new Server(server, {
@@ -9,12 +11,6 @@ const socketHandler = (server) => {
       methods: ['GET', 'POST'],
       credentials: true
     }
-  });
-
-  // ✅ Flask axios 인스턴스 (타임아웃, 환경변수 사용)
-  const flask = axios.create({
-    baseURL: process.env.FLASK_URL || 'http://127.0.0.1:5000',
-    timeout: 3000,
   });
 
   io.on('connection', (socket) => {
@@ -47,9 +43,18 @@ const socketHandler = (server) => {
       io.to(roomId).emit('manager-status', { connected: isManagerConnected });
       io.to(roomId).emit('room-info', { roomId, members, isManagerConnected });
 
-      // ✅ Flask decoder 초기화 (재입장 시 이전 예측 기록 제거)
+      // ============================
+      //  Flask decoder reset → Node 중계로 변경
+      // ============================
       try {
-        await flask.post('/reset', { roomId });
+        const res = await fetch(`http://127.0.0.1:3002/reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
         console.log(`🧹 Flask decoder reset 완료 for room: ${roomId}`);
       } catch (err) {
         console.warn('⚠️ Flask decoder reset 실패 (무시 가능):', err.message);
@@ -122,58 +127,62 @@ const socketHandler = (server) => {
         io.to(roomId).emit('room-members', members);
       });
 
-      // ===== Flask 연동 (trajectory 및 분기 처리 포함) =====
+      // ===== Flask 연동 (Node 중계 사용) =====
       let inferInFlight = false;
 
       socket.on('sequence', async ({ sequence }) => {
-  try {
-    if (!roomId) {
-      console.warn('roomId 없음: sequence 무시');
-      return;
-    }
+        try {
+          if (!roomId) {
+            console.warn('roomId 없음: sequence 무시');
+            return;
+          }
 
-    if (!Array.isArray(sequence) || sequence.length !== 30) {
-      console.warn('sequence 길이(30) 불일치:', sequence?.length);
-      return;
-    }
+          if (!Array.isArray(sequence) || sequence.length !== 30) {
+            console.warn('sequence 길이(30) 불일치:', sequence?.length);
+            return;
+          }
 
-    const frameLen = Array.isArray(sequence[0]) ? sequence[0].length : null;
-    if (!(frameLen === 126 || frameLen === 63)) {
-      console.warn('frame 길이(63|126) 불일치:', frameLen);
-      return;
-    }
+          const frameLen = Array.isArray(sequence[0]) ? sequence[0].length : null;
+          if (!(frameLen === 126 || frameLen === 63)) {
+            console.warn('frame 길이(63|126) 불일치:', frameLen);
+            return;
+          }
 
-    // ✅ frame 길이 63이면 패딩해서 126으로 맞춤
-    if (frameLen === 63) {
-      sequence = sequence.map(f => [...f, ...Array(63).fill(0)]);
-      console.log('sequence 길이 63 → 126으로 패딩 완료');
-    }
+          if (frameLen === 63) {
+            sequence = sequence.map(f => [...f, ...Array(63).fill(0)]);
+            console.log('sequence 길이 63 → 126으로 패딩 완료');
+          }
 
-    if (typeof sequence[0][0] !== 'number') {
-      console.warn('sequence 값이 number 아님');
-      return;
-    }
+          if (typeof sequence[0][0] !== 'number') {
+            console.warn('sequence 값이 number 아님');
+            return;
+          }
 
-    if (inferInFlight) return;
-    inferInFlight = true;
+          if (inferInFlight) return;
+          inferInFlight = true;
 
-    const res = await flask.post('/predict', { sequence, roomId });
-    console.log('📥 Flask 응답:', res.data);
+          // ============================
+          //  Flask predict → Node 중계 로 변경
+          // ============================
+          const res = await fetch(`http://127.0.0.1:3002/predict`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sequence, roomId })
+          });
 
-    io.to(roomId).emit('prediction', res.data);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-  } catch (err) {
-    if (err.response) {
-      console.error(' Flask 응답 에러:', err.response.status, err.response.data);
-    } else if (err.request) {
-      console.error(' Flask 무응답(타임아웃/네트워크):', err.message);
-    } else {
-      console.error(' 예측 중 예외:', err.message);
-    }
-    io.to(roomId).emit('prediction', { label: "예측 실패" });
-  } finally {
-    inferInFlight = false;
-  }
+          const data = await res.json();
+          console.log('📥 Node 중계 → Flask 응답:', data);
+
+          io.to(roomId).emit('prediction', data);
+
+        } catch (err) {
+          console.error(' 예측 중 예외:', err.message);
+          io.to(roomId).emit('prediction', { label: "예측 실패" });
+        } finally {
+          inferInFlight = false;
+        }
       });
     });
   });

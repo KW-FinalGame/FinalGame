@@ -9,14 +9,28 @@ from collections import defaultdict
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tensorflow.keras.models import load_model
+import sys
 
 app = Flask(__name__)
 CORS(app, origins="*")
 
+
+# ====================================
+# PyInstaller 경로 대응 함수
+# ====================================
+def resource_path(relative_path):
+    """실행 환경(dev / exe) 모두에서 파일 경로를 찾기 위한 함수"""
+    try:
+        base_path = sys._MEIPASS  # PyInstaller가 임시 디렉토리에 풀어놓음
+    except Exception:
+        base_path = os.path.abspath(".")  # 개발 환경
+
+    return os.path.join(base_path, relative_path)
+
+
 # --- 모델 경로 ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/cnn_model_bothhands.keras')
-DYNAMIC_MODEL_PATH = os.path.join(BASE_DIR, '../handmodel/dynamic_gesture_model3.h5')
+STATIC_MODEL_PATH = resource_path("handmodel/cnn_model_bothhands.keras")
+DYNAMIC_MODEL_PATH = resource_path("handmodel/dynamic_gesture_model3.h5")
 
 static_model = load_model(STATIC_MODEL_PATH)
 dynamic_model = load_model(DYNAMIC_MODEL_PATH)
@@ -38,6 +52,7 @@ def relative_coordinates_dynamic(seq):
     rel = seq - wrist
     return rel.reshape(30, 126).astype(np.float32)
 
+
 def compute_trajectory_variance(sequence):
     """시퀀스 프레임 간 이동 평균값"""
     diffs = np.diff(sequence, axis=0)
@@ -54,6 +69,7 @@ class ToyNgramLM:
         self.bigram = defaultdict(int)
         self.unigram = defaultdict(int)
         self.V = len(self.vocab) + 1
+
     def log_prob(self, w2, hist):
         w1 = hist[-1] if hist else "<s>"
         c12 = self.bigram[(w1, w2)]
@@ -61,12 +77,14 @@ class ToyNgramLM:
         p = (c12 + self.add_k) / (c1 + self.add_k * self.V)
         return math.log(max(p, 1e-9))
 
+
 class BeamDecoder:
     def __init__(self, lm, beam_size=5, alpha=0.6):
         self.lm = lm
         self.beam_size = beam_size
         self.alpha = alpha
         self.beam = [([], 0.0)]
+
     def step(self, word, conf):
         new_beam = []
         for tokens, score in self.beam:
@@ -75,8 +93,10 @@ class BeamDecoder:
             new_beam.append((tokens + [word], new_score))
         new_beam.sort(key=lambda x: x[1], reverse=True)
         self.beam = new_beam[:self.beam_size]
+
     def best(self):
         return self.beam[0][0] if self.beam else []
+
 
 lm_vocab = list(lstm_class_map.values()) + list(cnn_class_map.values())
 lm = ToyNgramLM(lm_vocab)
@@ -109,13 +129,13 @@ def predict_sequence(sequence, mask):
         confidence = float(np.max(probs))
         label = int(np.argmax(probs))
         label_text = lstm_class_map[label]
-        if label_text == "도와주세요" and confidence < 0.97:
+        if label_text == "도와주세요" and confidence > 0.97:
             label_text = "대기 중..."
         elif confidence < 0.85:
             label_text = "대기 중..."
         model_type = "DYNAMIC-LSTM"
 
-    # ✅ 디버그 로그 출력
+    # 디버그 로그
     print("=======================================")
     print(f"[DEBUG] traj_var: {traj_var:.5f}")
     print(f"[DEBUG] label: {label_text}")
@@ -138,6 +158,7 @@ def predict_api():
     if sequence.shape == (30, 63):
         zeros = np.zeros((30, 63), dtype=np.float32)
         sequence = np.concatenate([sequence, zeros], axis=1)
+
     mask = np.ones(42, dtype=np.float32)
 
     label_text, model_type, traj_var, confidence = predict_sequence(sequence, mask)
@@ -160,7 +181,6 @@ def predict_api():
         "trajVar": traj_var,
         "confidence": confidence,
         "sentence": " ".join(decoder.best()),
-        # ✅ 디버그용 필드
         "debug": {
             "traj_var": traj_var,
             "expected_range": "정적: 0.005~0.02 / 동적: 0.2↑",

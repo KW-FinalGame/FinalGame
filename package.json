@@ -1,24 +1,44 @@
 {
-    "name": "FinalGame",
-    "version": "1.0.0",
-    "scripts": {
-        "start": "concurrently \"npm run flask\" \"npm run wait-and-server\" \"npm run client\"",
-        "flask": "cd backend/python && python inference_server.py",
-        "wait-and-server": "wait-on http://localhost:5000 && npm run server",
-        "server": "cd backend && node server.js",
-        "client": "cd frontend && npm start"
-    },
-    "devDependencies": {
-        "concurrently": "^7.0.0",
-        "wait-on": "^8.0.3"
-    },
-    "dependencies": {
-        "@mediapipe/camera_utils": "^0.3.1675466862",
-        "@mediapipe/drawing_utils": "^0.3.1675466124",
-        "@mediapipe/hands": "^0.4.1675469240",
-        "axios": "^1.12.2",
-        "dotenv": "^16.5.0",
-        "flask": "^0.2.10",
-        "p-limit": "^6.2.0"
-    }
+  "name": "FinalGame",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently \"npm run flask\" \"npm run wait-and-server\" \"npm run client\"",
+    "flask": "cd backend/python && python inference_server.py",
+    "wait-and-server": "wait-on http://localhost:5000 && npm run server",
+    "server": "cd backend && node server.js",
+    "client": "cd frontend && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^7.0.0",
+    "wait-on": "^8.0.3"
+  },
+  "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/drawing_utils": "^0.3.1675466124",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.0",
+    "multer": "^2.0.2",
+    "p-limit": "^4.0.0",
+    "socket.io": "^4.7.2"
+  },
+
+  "bin": "backend/server.js",
+
+  "pkg": {
+    "assets": [
+      "backend/python/dist/inference_server.exe",
+      "frontend/build/**/*"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
+  }
 }
