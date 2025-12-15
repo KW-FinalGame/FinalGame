@@ -2,3 +2,10 @@ node_modules/
 .venv/
 *.env
 *.pem
+backend/.env
+*.pem
+.vs/
+dist/
+backend/python/build/
+backend/python/dist/
+EOF
